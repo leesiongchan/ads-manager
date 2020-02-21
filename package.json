@@ -1,0 +1,42 @@
+{
+  "name": "@leesiongchan/ads-manager",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leesiongchan/ads-manager.git",
+    "baseUrl": "https://github.com/leesiongchan/ads-manager"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Lee Siong Chan",
+    "email": "ahlee2326@me.com"
+  },
+  "keywords": [
+    "facebook-ads",
+    "google-ads",
+    "social-media",
+    "twitter-ads"
+  ],
+  "source": "src/index.ts",
+  "main": "dist/ads-manager.js",
+  "module": "dist/ads-manager.esm.js",
+  "scripts": {
+    "build": "microbundle -f es,cjs --target node"
+  },
+  "dependencies": {
+    "camelcase": "^5.3.1",
+    "facebook-nodejs-business-sdk": "^6.0.0",
+    "google-ads-api": "^3.5.0",
+    "got": "^10.6.0",
+    "js-sha256": "^0.9.0",
+    "twitter-lite": "^0.9.4"
+  },
+  "devDependencies": {
+    "@types/camelcase": "5.2.0",
+    "@yarnpkg/pnpify": "^2.0.0-rc.18",
+    "microbundle": "next",
+    "tslint": "^6.0.0",
+    "tslint-config-prettier": "^1.18.0",
+    "typescript": "^3.7.5"
+  }
+}

@@ -1,8 +1,10 @@
 import * as path from 'path';
+// @ts-ignore
 import facebookBizSdk from 'facebook-nodejs-business-sdk';
+import { DeepPartial } from 'ts-essentials';
 import { sha256 } from 'js-sha256';
 
-import Channel, { ChannelConfig, CustomAudienceUserData } from './channel';
+import Channel, { CustomAudienceUserData } from './channel';
 import {
   FacebookAdCreativeData,
   FacebookAdData,
@@ -14,9 +16,11 @@ import {
 import httpClient from '../utils/http-client';
 import { normalizeEmail } from '../utils/normalizer';
 
-type FacebookDefaultData = Partial<FacebookFullCampaignData & { customAudience: FacebookCustomAudienceData }>;
+type FacebookDefaultData = DeepPartial<
+  Omit<FacebookFullCampaignData, 'adCreativeIds' | 'adCreatives' | 'customAudienceId' | 'name' | 'status'>
+>;
 
-interface FacebookAdsChannelConfig extends ChannelConfig {
+interface FacebookAdsChannelConfig {
   accessToken: string;
   adAccountId: string;
 }
@@ -30,7 +34,7 @@ interface FacebookFullCampaignData {
   adCreatives?: Omit<FacebookFullAdCreativeData, 'name'>[];
   adSet: Omit<FacebookAdSetData, 'campaignId' | 'customAudienceId' | 'name' | 'status'>;
   campaign: Omit<FacebookCampaignData, 'name' | 'status'>;
-  customAudience?: Omit<FacebookCustomAudienceData, 'name'>;
+  customAudience?: Omit<FacebookCustomAudienceData, 'name' | 'subtype'>;
   customAudienceId?: string;
   name: string;
   status: FacebookCampaignStatus;
@@ -39,11 +43,11 @@ interface FacebookFullCampaignData {
 interface FacebookCustomAudienceUserData extends CustomAudienceUserData {}
 
 export class FacebookAdsChannel extends Channel {
-  private adAccount: facebookBizSdk.AdAccount;
+  private readonly adAccount: facebookBizSdk.AdAccount;
   private defaultValues: FacebookDefaultData = {};
 
-  constructor(readonly config: FacebookAdsChannelConfig) {
-    super(config);
+  constructor(readonly id: string, readonly config: FacebookAdsChannelConfig) {
+    super(id);
 
     facebookBizSdk.FacebookAdsApi.init(config.accessToken);
     this.adAccount = new facebookBizSdk.AdAccount(config.adAccountId);
@@ -85,6 +89,7 @@ export class FacebookAdsChannel extends Channel {
         ...this.defaultValues.customAudience,
         ...data.customAudience,
         name: `${data.name} - Custom Audience - ${new Date().getTime()}`,
+        subtype: 'CUSTOM',
       });
       customAudienceId = customAudience.id;
     }
@@ -112,14 +117,15 @@ export class FacebookAdsChannel extends Channel {
     }
 
     // 5. Create Ads
-    const adsData = adCreativeIds.map(adCreativeId =>
-      this.composeAdData({
-        adCreativeId,
-        adSetId: adSet.id,
-        name: `${data.name} - Ad - ${new Date().getTime()}`,
-        status: data.status,
-      }),
-    );
+    const adsData =
+      adCreativeIds?.map(adCreativeId =>
+        this.composeAdData({
+          adCreativeId,
+          adSetId: adSet.id,
+          name: `${data.name} - Ad - ${new Date().getTime()}`,
+          status: data.status,
+        }),
+      ) || [];
     await Promise.all(adsData.map(adData => this.adAccount.createAd([], adData)));
 
     return campaign;
@@ -156,7 +162,7 @@ export class FacebookAdsChannel extends Channel {
           description: adCreative.description,
           image_hash: adCreative.imageHash,
           link: adCreative.link,
-          message: adCreative.message,
+          message: adCreative.text,
           name: adCreative.headline,
         },
         page_id: adCreative.pageId,
@@ -167,25 +173,23 @@ export class FacebookAdsChannel extends Channel {
   private composeAdSetData(adSet: FacebookAdSetData) {
     return {
       bid_amount: adSet.bidAmount,
-      // billing_event: facebookBizSdk.AdSet.BillingEvent.impressions,
+      billing_event: adSet.billingEvent,
       campaign_id: adSet.campaignId,
       end_time: adSet.endTime,
       name: adSet.name,
       optimization_goal: adSet.optimizationGoal,
       start_time: adSet.startTime,
       status: adSet.status,
-      targeting: {
-        custom_audiences: [{ id: adSet.customAudienceId }],
-      },
+      targeting: { custom_audiences: [{ id: adSet.customAudienceId }] },
     };
   }
 
   private composeCustomAudienceData(customAudience: FacebookCustomAudienceData) {
     return {
-      // customer_file_source: facebookBizSdk.CustomAudience.CustomerFileSource.partner_provided_only,
+      customer_file_source: customAudience.customerFileSource,
       description: customAudience.description,
       name: customAudience.name,
-      subtype: facebookBizSdk.CustomAudience.Subtype.custom,
+      subtype: customAudience.subtype,
     };
   }
 
@@ -206,8 +210,8 @@ export class FacebookAdsChannel extends Channel {
       daily_budget: campaign.dailyBudget,
       lifetime_budget: campaign.lifetimeBudget,
       name: campaign.name,
-      // objective: facebookBizSdk.Campaign.Objective.link_clicks,
-      // special_ad_category: facebookBizSdk.Campaign.SpecialAdCategory.none,
+      objective: campaign.objective,
+      special_ad_category: campaign.specialAdCategory,
       status: campaign.status,
     };
   }

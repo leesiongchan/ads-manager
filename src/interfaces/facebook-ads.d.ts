@@ -16,17 +16,18 @@ export interface FacebookAdCreativeData {
   description?: string;
   imageHash: string;
   link: string;
-  headline: string;
-  message: string;
+  headline?: string;
+  text: string;
 }
 
 export interface FacebookAdSetData {
   bidAmount: number;
+  billingEvent?: 'IMPRESSIONS';
   campaignId: string;
   customAudienceId?: string;
   endTime?: string;
   name: string;
-  optimizationGoal: string;
+  optimizationGoal: 'IMPRESSIONS' | 'REACH';
   startTime: string;
   status: FacebookAdSetStatus;
 }
@@ -35,10 +36,14 @@ export interface FacebookCampaignData {
   dailyBudget: number;
   lifetimeBudget?: number;
   name: string;
+  objective?: 'LINK_CLICKS';
+  specialAdCategory?: 'NONE';
   status: FacebookCampaignStatus;
 }
 
 export interface FacebookCustomAudienceData {
+  customerFileSource?: 'PARTNER_PROVIDED_ONLY';
   description?: string;
   name: string;
+  subtype: 'CUSTOM';
 }

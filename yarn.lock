@@ -1088,6 +1088,7 @@ __metadata:
     got: ^10.6.0
     js-sha256: ^0.9.0
     microbundle: next
+    ts-essentials: ^6.0.1
     tslint: ^6.0.0
     tslint-config-prettier: ^1.18.0
     twitter-lite: ^0.9.4
@@ -5811,6 +5812,15 @@ __metadata:
     psl: ^1.1.28
     punycode: ^2.1.1
   checksum: 2/bf5d6fac5ce0bebc5876cb9b9a79d3d9ea21c9e4099f3d3e64701d6ba170a052cb88cece6737ec2473bac4f0a4f6c75d46ec17985be8587c6bbdd38d91625cb4
+  languageName: node
+  linkType: hard
+
+"ts-essentials@npm:^6.0.1":
+  version: 6.0.1
+  resolution: "ts-essentials@npm:6.0.1"
+  peerDependencies:
+    typescript: ">=3.7.0"
+  checksum: 2/1d27dc93ad9e0656fff013c8da95db334c2d7cbdd0afcfe96543c5100a0476c0a0df091108714ca1faf859e69517ac9684ef856d1a80fb8a900302c3cdaab140
   languageName: node
   linkType: hard
 

@@ -1,22 +1,22 @@
 import { Channel } from './channels';
 
-interface AdsManagerConfig {
-  channels: Channel[];
+interface AdsManagerConfig<T extends Channel> {
+  channels: T[];
 }
 
-export class AdsManager {
-  private channels: Channel[] = [];
+export class AdsManager<T extends Channel> {
+  private channels: T[] = [];
 
-  constructor(readonly config: AdsManagerConfig) {
+  constructor(readonly config: AdsManagerConfig<T>) {
     this.channels = config.channels;
   }
 
-  public addChannel(channel: Channel) {
+  public addChannel(channel: T) {
     this.channels.push(channel);
   }
 
-  public use(channelId: string) {
-    return this.channels.find(channel => channel.getId() === channelId);
+  public use<U extends T>(channelId: string): U | undefined {
+    return this.channels.find(channel => channel.getId() === channelId) as U;
   }
 }
 

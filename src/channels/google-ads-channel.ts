@@ -21,7 +21,9 @@ import { convertMinorToMicroUnit } from '../utils/money-converter';
 import { randomNumber } from '../utils/randomizer';
 
 type GoogleAdsDefaultData = DeepPartial<
-  Omit<GoogleAdsCampaignData, 'adGroupAd' | 'campaign' | 'campaignBudget' | 'name' | 'status'>
+  Omit<GoogleAdsCampaignData, 'adGroupAd' | 'name' | 'status'> & {
+    adGroupAd: Pick<GoogleAdsAdGroupAdData, 'businessName'>;
+  }
 >;
 
 interface GoogleAdsChannelConfig {
@@ -67,11 +69,13 @@ export class GoogleAdsChannel extends Channel {
   }
 
   public async createCampaign(data: GoogleAdsCampaignData): Promise<string> {
-    const prefixResourceName = `customers/${this.config.customerAccountId}`;
+    const prefixResourceName = `customers/${this.config.customerAccountId.replace(/-/g, '')}`;
     let initialIndex = -randomNumber();
     const newCampaignBudgetId = initialIndex--;
     const newCampaignId = initialIndex--;
     const newAdGroupId = initialIndex--;
+
+    super.getLogger()?.info(`Creating Campaign...`);
 
     // Preparing resources
     const mutateResources = await Promise.all([
@@ -107,6 +111,7 @@ export class GoogleAdsChannel extends Channel {
       // 1. Create Campaign Budget
       {
         ...this.composeCampaignBudgetMutateResource({
+          ...this.defaultValues.campaignBudget,
           ...data.campaignBudget,
           name: `${data.name} - Budget`,
         }),
@@ -116,6 +121,7 @@ export class GoogleAdsChannel extends Channel {
       // 2. Create Campaign
       {
         ...this.composeCampaignMutateResource({
+          ...this.defaultValues.campaign,
           ...data.campaign,
           campaignBudgetResourceName: `${prefixResourceName}/campaignBudgets/${newCampaignBudgetId}`,
           name: data.name,
@@ -157,6 +163,7 @@ export class GoogleAdsChannel extends Channel {
       // 8. Create Ad Group Ad
       {
         ...this.composeAdGroupAdMutateResource({
+          ...this.defaultValues.adGroupAd,
           ...data.adGroupAd,
           adGroupResourceName: `${prefixResourceName}/adGroups/${newAdGroupId}`,
           advertisingChannelType: data.campaign.advertisingChannelType,
@@ -174,7 +181,11 @@ export class GoogleAdsChannel extends Channel {
       },
     ]);
 
-    return response.results[response.results.length - 1];
+    const campaignResourceName = response.results[response.results.length - 1];
+
+    super.getLogger()?.info(`Campaign has been created successfully -> ${campaignResourceName}`);
+
+    return campaignResourceName;
   }
 
   public async createCustomAudience(data: any) {

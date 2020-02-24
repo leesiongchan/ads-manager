@@ -33,7 +33,7 @@ export interface FacebookAdSetData {
 }
 
 export interface FacebookCampaignData {
-  dailyBudget: number;
+  dailyBudget?: number;
   lifetimeBudget?: number;
   name: string;
   objective?: 'LINK_CLICKS';

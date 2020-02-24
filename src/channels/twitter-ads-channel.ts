@@ -1,8 +1,8 @@
+// @ts-ignore
+import * as Twitter from 'twitter-lite';
 import * as mime from 'mime-types';
 import * as path from 'path';
 import Fetch from 'cross-fetch';
-// @ts-ignore
-import Twitter from 'twitter-lite';
 import { DeepPartial } from 'ts-essentials';
 import { formatISO, parseISO } from 'date-fns';
 import { sha256 } from 'js-sha256';
@@ -68,9 +68,11 @@ export class TwitterAdsChannel extends Channel {
 
   public async createAd(data: TwitterAdsTweetData): Promise<any> {
     const mediaKeys = await Promise.all(
-      data.mediaUrls.map(async mediaUrl => {
+      data.mediaUrls.map(async (mediaUrl, index) => {
+        super.getLogger()?.info(`Uploading media (${index + 1}/${data.mediaUrls.length})...`);
         const media = await this.uploadMedia({ additionalOwnerIds: [data.asUserId], mediaUrl });
         // Adds into `MediaLibrary`
+        super.getLogger()?.info(`Adding media to Media Library (${index + 1}/${data.mediaUrls.length})...`);
         await this.twitterAdsClient.post(`${this.apiUrlPrefix}/media_library`, {
           file_name: path.basename(mediaUrl),
           media_category: 'TWEET_IMAGE',
@@ -79,14 +81,15 @@ export class TwitterAdsChannel extends Channel {
         return media.media_key;
       }),
     );
-    const tweetResponse = await this.twitterAdsClient.post(
-      `${this.apiUrlPrefix}/tweet`,
-      this.composeTweetData({
-        asUserId: data.asUserId,
-        text: data.text,
-        mediaKeys,
-      }),
-    );
+
+    const tweetData = this.composeTweetData({
+      asUserId: data.asUserId,
+      text: data.text,
+      mediaKeys,
+    });
+    super.getLogger()?.info(tweetData, `Creating tweet...`);
+    const tweetResponse = await this.twitterAdsClient.post(`${this.apiUrlPrefix}/tweet`, tweetData);
+
     return tweetResponse.data;
   }
 
@@ -99,25 +102,23 @@ export class TwitterAdsChannel extends Channel {
     }
 
     // 1. Create a campaign and associate it with the funding instrument.
-    const { data: campaign } = await this.twitterAdsClient.post(
-      `${this.apiUrlPrefix}/campaigns`,
-      this.composeCampaignData({
-        ...data.campaign,
-        name: `${data.name} - Campaign`,
-        status: 'ACTIVE',
-      }),
-    );
+    const campaignData = this.composeCampaignData({
+      ...data.campaign,
+      name: `${data.name} - Campaign`,
+      status: 'ACTIVE',
+    });
+    super.getLogger()?.info(campaignData, `Creating Campaign...`);
+    const { data: campaign } = await this.twitterAdsClient.post(`${this.apiUrlPrefix}/campaigns`, campaignData);
 
     // 2. Create a line item associated with the campaign.
-    const { data: lineItem } = await this.twitterAdsClient.post(
-      `${this.apiUrlPrefix}/line_items`,
-      this.composeLineItemData({
-        ...data.lineItem,
-        campaignId: campaign.id,
-        name: `${data.name} - Group`,
-        status: 'PAUSED',
-      }),
-    );
+    const lineItemData = this.composeLineItemData({
+      ...data.lineItem,
+      campaignId: campaign.id,
+      name: `${data.name} - Group`,
+      status: 'PAUSED',
+    });
+    super.getLogger()?.info(lineItemData, `Creating Line Item...`);
+    const { data: lineItem } = await this.twitterAdsClient.post(`${this.apiUrlPrefix}/line_items`, lineItemData);
 
     // 3. Create tweet (optional)
     let tweetId = data.tweetId;
@@ -127,13 +128,12 @@ export class TwitterAdsChannel extends Channel {
     }
 
     // 4. Create promoted tweet associated with the line item.
-    await this.twitterAdsClient.post(
-      `${this.apiUrlPrefix}/promoted_tweets`,
-      this.composePromotedTweetData({
-        lineItemId: lineItem.id,
-        tweetIds: [tweetId!],
-      }),
-    );
+    const promotedTweetData = this.composePromotedTweetData({
+      lineItemId: lineItem.id,
+      tweetIds: [tweetId!],
+    });
+    super.getLogger()?.info(promotedTweetData, `Creating Promoted Tweet...`);
+    await this.twitterAdsClient.post(`${this.apiUrlPrefix}/promoted_tweets`, promotedTweetData);
 
     // Creating a new tailored audience is pointless since Twitter requires the size of tailored audience to have at least 100
     // 5. Create a tailored audience (optional)
@@ -144,31 +144,40 @@ export class TwitterAdsChannel extends Channel {
     // }
 
     // 6. Create a targeting profile associated with the line item.
-    await this.twitterAdsClient.post(
-      `${this.apiUrlPrefix}/targeting_criteria`,
-      this.composeTargetingCriterionData({
-        lineItemId: lineItem.id,
-        tailoredAudienceId: data.tailoredAudienceId,
-      }),
-    );
+    const targetingCriterionData = this.composeTargetingCriterionData({
+      lineItemId: lineItem.id,
+      tailoredAudienceId: data.tailoredAudienceId,
+    });
+    super.getLogger()?.info(targetingCriterionData, `Creating Targeting Criterion...`);
+    await this.twitterAdsClient.post(`${this.apiUrlPrefix}/targeting_criteria`, targetingCriterionData);
 
     // 7. Finally, un-pause the line item.
+    super.getLogger()?.info(`Updating Line Item (${lineItem.id}) to ${data.status}...`);
     await this.twitterAdsClient.put(`${this.apiUrlPrefix}/line_items/${lineItem.id}`, {
       entity_status: data.status || 'ACTIVE',
     });
+
+    super.getLogger()?.info(`Campaign has been created successfully -> ${campaign.id}`);
 
     return campaign;
   }
 
   public async createCustomAudience(data: TwitterTailoredAudienceData) {
-    const tailoredAudienceResponse = await this.twitterAdsClient.post(`${this.apiUrlPrefix}/tailored_audiences`, {
+    const tailoredAudienceData = {
       name: data.name,
-    });
-    return tailoredAudienceResponse.data;
+    };
+    super.getLogger()?.info(tailoredAudienceData, `Creating Tailored Audience...`);
+    const { data: tailoredAudience } = await this.twitterAdsClient.post(
+      `${this.apiUrlPrefix}/tailored_audiences`,
+      tailoredAudienceData,
+    );
+    super.getLogger()?.info(`Tailored Audience has been created successfully -> ${tailoredAudience.id}`);
+    return tailoredAudience.data;
   }
 
   public async createCustomAudienceUsers(customAudienceId: string, data: TwitterAdsTailoredAudienceUserData) {
-    const tailoredAudienceUsersResponse = await this.twitterAdsClient.postJSON(
+    super.getLogger()?.info(`Adding ${data.users.length} users to the Tailored Audience...`);
+    const { data: tailoredAudienceUsers } = await this.twitterAdsClient.postJSON(
       `${this.apiUrlPrefix}/tailored_audiences/${customAudienceId}/users`,
       [
         {
@@ -183,7 +192,10 @@ export class TwitterAdsChannel extends Channel {
         },
       ],
     );
-    return tailoredAudienceUsersResponse.data;
+    super
+      .getLogger()
+      ?.info(`${data.users.length} users have been added to the Tailored Audience -> ${customAudienceId}`);
+    return tailoredAudienceUsers;
   }
 
   public setConfig(config: Partial<TwitterAdsChannelConfig>) {

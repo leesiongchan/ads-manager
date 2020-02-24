@@ -32,15 +32,18 @@
     "got": "^10.6.0",
     "js-sha256": "^0.9.0",
     "mime-types": "^2.1.26",
+    "pino": "^5.16.0",
+    "pino-pretty": "^3.6.0",
     "twitter-lite": "^0.9.4"
   },
   "devDependencies": {
     "@types/mime-types": "2.1.0",
+    "@types/pino": "5.15.5",
     "@yarnpkg/pnpify": "^2.0.0-rc.18",
     "microbundle": "next",
     "ts-essentials": "^6.0.1",
     "tslint": "^6.0.0",
     "tslint-config-prettier": "^1.18.0",
-    "typescript": "^3.7.5"
+    "typescript": "^3.8.2"
   }
 }

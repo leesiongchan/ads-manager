@@ -56,7 +56,7 @@ twitterAdsChannel.setDefaultValues({
 
 const adsManager = new AdsManager({
   channels: [facebookAdsChannel, googleAdsChannel, twitterAdsChannel],
-  // debug: true, // WIP
+  logging: true,
 });
 
 adsManager.use<FacebookAdsChannel>('facebook-ads')?.createCampaign({
@@ -152,7 +152,7 @@ WIP
 - [x] Twitter Ads channel
 - [ ] Better documentation
 - [ ] Better typing
-- [ ] Add logs
+- [x] Add logs
 - [ ] Add tests
 - [ ] Add validations
 - [ ] Check possible parameters for the chosen type, (eg. Google Ads: Search Type and Display Type have different set of bidding strategies)

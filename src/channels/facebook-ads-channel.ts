@@ -1,6 +1,6 @@
-import * as path from 'path';
 // @ts-ignore
-import facebookBizSdk from 'facebook-nodejs-business-sdk';
+import * as facebookBizSdk from 'facebook-nodejs-business-sdk';
+import * as path from 'path';
 import { DeepPartial } from 'ts-essentials';
 import { sha256 } from 'js-sha256';
 
@@ -54,17 +54,23 @@ export class FacebookAdsChannel extends Channel {
 
   public async createAd({ imageUrl, ...data }: FacebookAdsAdCreativeData) {
     const image = (await httpClient(imageUrl, { responseType: 'buffer' })).body;
-    const adImage = await this.adAccount.createAdImage([], {
+    const adImageData = {
       bytes: image.toString('base64'),
       name: path.basename(imageUrl),
+    };
+    super.getLogger()?.info({ ...adImageData, bytes: '--skiped--' }, `Creating Ad Image...`);
+    const adImage = await this.adAccount.createAdImage([], adImageData);
+
+    const adCreativeData = this.composeAdCreativeData({
+      ...data,
+      imageHash: Object.values<{ hash: string }>(adImage.images)[0].hash,
     });
-    return this.adAccount.createAdCreative(
-      [],
-      this.composeAdCreativeData({
-        ...data,
-        imageHash: Object.values<{ hash: string }>(adImage.images)[0].hash,
-      }),
-    );
+    super.getLogger()?.info(adCreativeData, `Creating Ad Creative...`);
+    const adCreative = await this.adAccount.createAdCreative([], adCreativeData);
+
+    super.getLogger()?.info(`Ad Creative has been created successfully -> ${adCreative.id}`);
+
+    return adCreative;
   }
 
   public async createCampaign(data: FacebookAdsCampaignData) {
@@ -82,17 +88,20 @@ export class FacebookAdsChannel extends Channel {
       name: data.name,
       status: data.status,
     });
+    super.getLogger()?.info(campaignData, `Creating Campaign...`);
     const campaign = await this.adAccount.createCampaign([], campaignData);
 
     // 2. Create Custom Audience (optional)
     let customAudienceId = data.customAudienceId;
     if (data.customAudience) {
-      const customAudience = await this.createCustomAudience({
+      const customAudienceData: FacebookCustomAudienceData = {
         ...this.defaultValues.customAudience,
         ...data.customAudience,
         name: `${data.name} - Custom Audience - ${new Date().getTime()}`,
         subtype: 'CUSTOM',
-      });
+      };
+      super.getLogger()?.info(customAudienceData, `Creating Custom Audience...`);
+      const customAudience = await this.createCustomAudience(customAudienceData);
       customAudienceId = customAudience.id;
     }
 
@@ -105,6 +114,7 @@ export class FacebookAdsChannel extends Channel {
       name: `${data.name} - Ad Set`,
       status: data.status,
     });
+    super.getLogger()?.info(adSetData, `Creating Ad Set...`);
     const adSet = await this.adAccount.createAdSet([], adSetData);
 
     // 4. Create AdCreative (optional)
@@ -128,18 +138,33 @@ export class FacebookAdsChannel extends Channel {
           status: data.status,
         }),
       ) || [];
-    await Promise.all(adsData.map(adData => this.adAccount.createAd([], adData)));
+    await Promise.all(
+      adsData.map((adData, index) => {
+        super.getLogger()?.info(adData, `Creating Ad (${index + 1}/${adsData.length})...`);
+        return this.adAccount.createAd([], adData);
+      }),
+    );
+
+    super.getLogger()?.info(`Campaign has been created successfully -> ${campaign.id}`);
 
     return campaign;
   }
 
-  public createCustomAudience(data: FacebookCustomAudienceData) {
-    return this.adAccount.createCustomAudience([], this.composeCustomAudienceData(data));
+  public async createCustomAudience(data: FacebookCustomAudienceData) {
+    const customAudienceData = this.composeCustomAudienceData(data);
+    super.getLogger()?.info(customAudienceData, `Creating Custom Audience...`);
+    const customAudience = await this.adAccount.createCustomAudience([], customAudienceData);
+    super.getLogger()?.info(`Custom Audience has been created successfully -> ${customAudience.id}`);
+    return customAudience;
   }
 
-  public createCustomAudienceUsers(customAudienceId: string, data: FacebookAdsCustomAudienceUserData) {
+  public async createCustomAudienceUsers(customAudienceId: string, data: FacebookAdsCustomAudienceUserData) {
     const customAudience = new facebookBizSdk.CustomAudience(customAudienceId);
-    return customAudience.createUser([], this.composeCustomAudienceUserData(data));
+    const customAudienceUserData = this.composeCustomAudienceUserData(data);
+    super.getLogger()?.info(`Adding ${data.users.length} users to the Custom Audience...`);
+    const customAudienceUser = await customAudience.createUser([], customAudienceUserData);
+    super.getLogger()?.info(`${data.users.length} users have been added to the Custom Audience -> ${customAudienceId}`);
+    return customAudienceUser;
   }
 
   public setDefaultValues(defaultValues: FacebookAdsDefaultData) {
@@ -160,7 +185,9 @@ export class FacebookAdsChannel extends Channel {
       name: adCreative.name,
       object_story_spec: {
         link_data: {
-          call_to_action: { type: adCreative.callToActionType, value: { link: adCreative.link } },
+          call_to_action: adCreative.callToActionType
+            ? { type: adCreative.callToActionType, value: { link: adCreative.link } }
+            : undefined,
           description: adCreative.description,
           image_hash: adCreative.imageHash,
           link: adCreative.link,

@@ -1,6 +1,8 @@
-import * as pino from 'pino';
+import * as Pino from 'pino';
 
 import { Channel } from './channels';
+
+const pino = Pino;
 
 interface AdsManagerConfig<T extends Channel> {
   channels: T[];
@@ -9,7 +11,7 @@ interface AdsManagerConfig<T extends Channel> {
 
 export class AdsManager<T extends Channel> {
   private channels: T[] = [];
-  private readonly logger: pino.Logger;
+  private readonly logger: Pino.Logger;
 
   constructor(readonly config: AdsManagerConfig<T>) {
     this.logger = pino({

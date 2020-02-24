@@ -75,7 +75,7 @@ export class GoogleAdsChannel extends Channel {
     const newCampaignId = initialIndex--;
     const newAdGroupId = initialIndex--;
 
-    super.getLogger()?.info(`Creating Campaign...`);
+    this.getLogger()?.info(`Creating Campaign...`);
 
     // Preparing resources
     const mutateResources = await Promise.all([
@@ -183,7 +183,7 @@ export class GoogleAdsChannel extends Channel {
 
     const campaignResourceName = response.results[response.results.length - 1];
 
-    super.getLogger()?.info(`Campaign has been created successfully -> ${campaignResourceName}`);
+    this.getLogger()?.info(`Campaign has been created successfully -> ${campaignResourceName}`);
 
     return campaignResourceName;
   }

@@ -58,17 +58,17 @@ export class FacebookAdsChannel extends Channel {
       bytes: image.toString('base64'),
       name: path.basename(imageUrl),
     };
-    super.getLogger()?.info({ ...adImageData, bytes: '--skiped--' }, `Creating Ad Image...`);
+    this.getLogger()?.info({ ...adImageData, bytes: '--skiped--' }, `Creating Ad Image...`);
     const adImage = await this.adAccount.createAdImage([], adImageData);
 
     const adCreativeData = this.composeAdCreativeData({
       ...data,
       imageHash: Object.values<{ hash: string }>(adImage.images)[0].hash,
     });
-    super.getLogger()?.info(adCreativeData, `Creating Ad Creative...`);
+    this.getLogger()?.info(adCreativeData, `Creating Ad Creative...`);
     const adCreative = await this.adAccount.createAdCreative([], adCreativeData);
 
-    super.getLogger()?.info(`Ad Creative has been created successfully -> ${adCreative.id}`);
+    this.getLogger()?.info(`Ad Creative has been created successfully -> ${adCreative.id}`);
 
     return adCreative;
   }
@@ -88,7 +88,7 @@ export class FacebookAdsChannel extends Channel {
       name: data.name,
       status: data.status,
     });
-    super.getLogger()?.info(campaignData, `Creating Campaign...`);
+    this.getLogger()?.info(campaignData, `Creating Campaign...`);
     const campaign = await this.adAccount.createCampaign([], campaignData);
 
     // 2. Create Custom Audience (optional)
@@ -100,7 +100,7 @@ export class FacebookAdsChannel extends Channel {
         name: `${data.name} - Custom Audience - ${new Date().getTime()}`,
         subtype: 'CUSTOM',
       };
-      super.getLogger()?.info(customAudienceData, `Creating Custom Audience...`);
+      this.getLogger()?.info(customAudienceData, `Creating Custom Audience...`);
       const customAudience = await this.createCustomAudience(customAudienceData);
       customAudienceId = customAudience.id;
     }
@@ -114,7 +114,7 @@ export class FacebookAdsChannel extends Channel {
       name: `${data.name} - Ad Set`,
       status: data.status,
     });
-    super.getLogger()?.info(adSetData, `Creating Ad Set...`);
+    this.getLogger()?.info(adSetData, `Creating Ad Set...`);
     const adSet = await this.adAccount.createAdSet([], adSetData);
 
     // 4. Create AdCreative (optional)
@@ -140,30 +140,30 @@ export class FacebookAdsChannel extends Channel {
       ) || [];
     await Promise.all(
       adsData.map((adData, index) => {
-        super.getLogger()?.info(adData, `Creating Ad (${index + 1}/${adsData.length})...`);
+        this.getLogger()?.info(adData, `Creating Ad (${index + 1}/${adsData.length})...`);
         return this.adAccount.createAd([], adData);
       }),
     );
 
-    super.getLogger()?.info(`Campaign has been created successfully -> ${campaign.id}`);
+    this.getLogger()?.info(`Campaign has been created successfully -> ${campaign.id}`);
 
     return campaign;
   }
 
   public async createCustomAudience(data: FacebookCustomAudienceData) {
     const customAudienceData = this.composeCustomAudienceData(data);
-    super.getLogger()?.info(customAudienceData, `Creating Custom Audience...`);
+    this.getLogger()?.info(customAudienceData, `Creating Custom Audience...`);
     const customAudience = await this.adAccount.createCustomAudience([], customAudienceData);
-    super.getLogger()?.info(`Custom Audience has been created successfully -> ${customAudience.id}`);
+    this.getLogger()?.info(`Custom Audience has been created successfully -> ${customAudience.id}`);
     return customAudience;
   }
 
   public async createCustomAudienceUsers(customAudienceId: string, data: FacebookAdsCustomAudienceUserData) {
     const customAudience = new facebookBizSdk.CustomAudience(customAudienceId);
     const customAudienceUserData = this.composeCustomAudienceUserData(data);
-    super.getLogger()?.info(`Adding ${data.users.length} users to the Custom Audience...`);
+    this.getLogger()?.info(`Adding ${data.users.length} users to the Custom Audience...`);
     const customAudienceUser = await customAudience.createUser([], customAudienceUserData);
-    super.getLogger()?.info(`${data.users.length} users have been added to the Custom Audience -> ${customAudienceId}`);
+    this.getLogger()?.info(`${data.users.length} users have been added to the Custom Audience -> ${customAudienceId}`);
     return customAudienceUser;
   }
 

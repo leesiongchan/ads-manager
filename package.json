@@ -20,19 +20,22 @@
   "source": "src/index.ts",
   "main": "dist/ads-manager.js",
   "module": "dist/ads-manager.esm.js",
+  "types": "dist/ads-manager.d.ts",
   "scripts": {
     "build": "microbundle -f es,cjs --target node"
   },
   "dependencies": {
-    "camelcase": "^5.3.1",
+    "change-case": "^4.1.1",
+    "date-fns": "^2.9.0",
     "facebook-nodejs-business-sdk": "^6.0.0",
     "google-ads-api": "^3.5.0",
     "got": "^10.6.0",
     "js-sha256": "^0.9.0",
+    "mime-types": "^2.1.26",
     "twitter-lite": "^0.9.4"
   },
   "devDependencies": {
-    "@types/camelcase": "5.2.0",
+    "@types/mime-types": "2.1.0",
     "@yarnpkg/pnpify": "^2.0.0-rc.18",
     "microbundle": "next",
     "ts-essentials": "^6.0.1",

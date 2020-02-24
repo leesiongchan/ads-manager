@@ -16,8 +16,8 @@ import {
 import httpClient from '../utils/http-client';
 import { normalizeEmail } from '../utils/normalizer';
 
-type FacebookDefaultData = DeepPartial<
-  Omit<FacebookFullCampaignData, 'adCreativeIds' | 'adCreatives' | 'customAudienceId' | 'name' | 'status'>
+type FacebookAdsDefaultData = DeepPartial<
+  Omit<FacebookAdsCampaignData, 'adCreativeIds' | 'adCreatives' | 'customAudienceId' | 'name' | 'status'>
 >;
 
 interface FacebookAdsChannelConfig {
@@ -25,13 +25,13 @@ interface FacebookAdsChannelConfig {
   adAccountId: string;
 }
 
-interface FacebookFullAdCreativeData extends Omit<FacebookAdCreativeData, 'imageHash'> {
+interface FacebookAdsAdCreativeData extends Omit<FacebookAdCreativeData, 'imageHash'> {
   imageUrl: string;
 }
 
-interface FacebookFullCampaignData {
+interface FacebookAdsCampaignData {
   adCreativeIds?: string[];
-  adCreatives?: Omit<FacebookFullAdCreativeData, 'name'>[];
+  adCreatives?: Omit<FacebookAdsAdCreativeData, 'name'>[];
   adSet: Omit<FacebookAdSetData, 'campaignId' | 'customAudienceId' | 'name' | 'status'>;
   campaign: Omit<FacebookCampaignData, 'name' | 'status'>;
   customAudience?: Omit<FacebookCustomAudienceData, 'name' | 'subtype'>;
@@ -40,20 +40,19 @@ interface FacebookFullCampaignData {
   status: FacebookCampaignStatus;
 }
 
-interface FacebookCustomAudienceUserData extends CustomAudienceUserData {}
+interface FacebookAdsCustomAudienceUserData extends CustomAudienceUserData {}
 
 export class FacebookAdsChannel extends Channel {
-  private readonly adAccount: facebookBizSdk.AdAccount;
-  private defaultValues: FacebookDefaultData = {};
+  private adAccount: facebookBizSdk.AdAccount;
+  protected defaultValues: FacebookAdsDefaultData = {};
 
-  constructor(readonly id: string, readonly config: FacebookAdsChannelConfig) {
+  constructor(readonly id: string, private config: FacebookAdsChannelConfig) {
     super(id);
 
-    facebookBizSdk.FacebookAdsApi.init(config.accessToken);
-    this.adAccount = new facebookBizSdk.AdAccount(config.adAccountId);
+    this.updateClient();
   }
 
-  public async createAd({ imageUrl, ...data }: FacebookFullAdCreativeData) {
+  public async createAd({ imageUrl, ...data }: FacebookAdsAdCreativeData) {
     const image = (await httpClient(imageUrl, { responseType: 'buffer' })).body;
     const adImage = await this.adAccount.createAdImage([], {
       bytes: image.toString('base64'),
@@ -68,9 +67,12 @@ export class FacebookAdsChannel extends Channel {
     );
   }
 
-  public async createCampaign(data: FacebookFullCampaignData) {
+  public async createCampaign(data: FacebookAdsCampaignData) {
     if (!data.adCreativeIds && !data.adCreatives) {
       throw new Error('`adCreativeIds` or `adCreatives` is not defined');
+    }
+    if (!data.customAudienceId && !data.customAudience) {
+      throw new Error('`customAudienceId` or `customAudience` is not defined');
     }
 
     // 1. Create Campaign
@@ -135,12 +137,12 @@ export class FacebookAdsChannel extends Channel {
     return this.adAccount.createCustomAudience([], this.composeCustomAudienceData(data));
   }
 
-  public createCustomAudienceUsers(customAudienceId: string, data: FacebookCustomAudienceUserData) {
+  public createCustomAudienceUsers(customAudienceId: string, data: FacebookAdsCustomAudienceUserData) {
     const customAudience = new facebookBizSdk.CustomAudience(customAudienceId);
     return customAudience.createUser([], this.composeCustomAudienceUserData(data));
   }
 
-  public setDefaultValues(defaultValues: FacebookDefaultData) {
+  public setDefaultValues(defaultValues: FacebookAdsDefaultData) {
     this.defaultValues = defaultValues;
   }
 
@@ -193,7 +195,7 @@ export class FacebookAdsChannel extends Channel {
     };
   }
 
-  private composeCustomAudienceUserData(customAudienceUserData: FacebookCustomAudienceUserData) {
+  private composeCustomAudienceUserData(customAudienceUserData: FacebookAdsCustomAudienceUserData) {
     return {
       payload: {
         schema: ['EMAIL', 'PHONE'],
@@ -214,5 +216,15 @@ export class FacebookAdsChannel extends Channel {
       special_ad_category: campaign.specialAdCategory,
       status: campaign.status,
     };
+  }
+
+  public setConfig(config: Partial<FacebookAdsChannelConfig>) {
+    Object.assign(this.config, config);
+    this.updateClient();
+  }
+
+  private updateClient() {
+    facebookBizSdk.FacebookAdsApi.init(this.config.accessToken);
+    this.adAccount = new facebookBizSdk.AdAccount(this.config.adAccountId);
   }
 }

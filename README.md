@@ -4,7 +4,7 @@ Create Ads (Google Ads / Facebook Ads / Twitter Ads) with ease, period.
 
 **NOTE: This library is very much opinionated, use it at your own risk. Making it an agnostic library is the ongoing plan, your help is very much needed to make this happen!**
 
-**NOTE: All the price amounts are in `micro` unit, 1000 = \$10.00**
+**NOTE: All the price amounts are in `minor` unit, 1000 = \$10.00**
 
 ## Usage
 
@@ -25,25 +25,53 @@ facebookAdsChannel.setDefaultValues({
     customerFileSource: 'PARTNER_PROVIDED_ONLY',
   },
 });
+const googleAdsChannel = new GoogleAdsChannel('google-ads', {
+  clientId: 'xxxx',
+  clientSecret: 'yyyy',
+  customerAccountId: 'zzzz',
+  developerToken: 'aaaa',
+  refreshToken: 'bbbb',
+});
+googleAdsChannel.setDefaultValues({
+  adGroupCriteria: {
+    keywords: ['alien'],
+  },
+  campaignCriteria: {
+    languageCodes: ['en_US'],
+    locationCountryCodes: ['MY'],
+  },
+});
+const twitterAdsChannel = new TwitterAdsChannel('twitter-ads', {
+  accessTokenKey: 'xxxx',
+  accessTokenSecret: 'yyyy',
+  adAccountId: 'zzzz',
+  consumerKey: 'aaaa',
+  consumerSecret: 'bbbb',
+});
+twitterAdsChannel.setDefaultValues({
+  tweet: {
+    asUserId: 'dddd',
+  },
+});
 
 const adsManager = new AdsManager({
-  channels: [facebookAdsChannel],
+  channels: [facebookAdsChannel, googleAdsChannel, twitterAdsChannel],
   // debug: true, // WIP
 });
 
-await adsManager.use<FacebookAdsChannel>('facebook-ads')?.createCampaign({
+adsManager.use<FacebookAdsChannel>('facebook-ads')?.createCampaign({
   adCreatives: [
     {
       headline: 'I am headline',
-      description: 'I am description',
+      description: 'I am desc',
       imageUrl: 'https://the-lib-will-automatically-download-and-convert-for-you.com',
       link: 'https://wherearethealiens.com',
       pageId: 'zzzz',
-      text: 'I am test',
+      text: 'I am text',
     },
   ],
   adSet: {
-    bidAmount: 1000, // All the price amounts are in `micro` unit, 1000 = $10.00
+    bidAmount: 1000, // All the price amounts are in `minor` unit, 1000 = $10.00
     optimizationGoal: 'IMPRESSIONS',
     startTime: '2020-02-20',
     endTime: '2020-02-25',
@@ -55,8 +83,61 @@ await adsManager.use<FacebookAdsChannel>('facebook-ads')?.createCampaign({
   customAudience: {
     description: 'I am custom audience desc',
   },
-  name: 'My First Ads',
+  name: 'My First Facebook Ads',
   status: 'ACTIVE',
+});
+
+adsManager.use<GoogleAdsChannel>('google-ads')?.createCampaign({
+  adGroupAd: {
+    businessName: 'dddd',
+    descriptions: ['I am desc 1', 'I am desc 2'],
+    headlines: ['I am headline 1', 'I am headline 2', 'I am headline 3'],
+    imageUrls: ['https://the-lib-will-automatically-download-and-convert-for-you.com'],
+    squareImageUrls: ['https://the-lib-will-automatically-download-and-convert-for-you-square.com'],
+    url: 'https://wherearethealiens.com',
+    displayUrlPaths: ['displaypath1', 'displaypath2'],
+  },
+  adGroupCriteria: {
+    keywords: ['alien'],
+  },
+  campaign: {
+    advertisingChannelType: 'DISPLAY',
+    biddingStrategyConfig: { cpcBidCeilingAmount: 1000 },
+    biddingStrategyType: 'TARGET_SPEND',
+    endDate: '2020-01-05',
+    startDate: '2020-01-01',
+  },
+  campaignBudget: {
+    dailyAmount: 5000,
+    totalAmount: 10000,
+  },
+  campaignCriteria: {
+    languageCodes: ['en_US'],
+    locationCountryCodes: ['MY'],
+  },
+  name: 'My First Google Ads',
+  status: 'ENABLED',
+});
+
+adsManager.use<TwitterAdsChannel>('twitter-ads')?.createCampaign({
+  campaign: {
+    dailyBudget: 1000,
+    fundingInstrumentId: 'cccc',
+    endTime: '2020-01-05',
+    startTime: '2020-01-01',
+    totalBudget: 10000,
+  },
+  lineItem: {
+    bidAmount: 1000,
+  },
+  name: 'My First Twitter Ads',
+  status: 'ACTIVE',
+  tailoredAudienceId: 'eeee',
+  tweet: {
+    asUserId: 'ffff',
+    mediaUrls: ['https://the-lib-will-automatically-download-and-convert-for-you.com'],
+    text: 'I am text',
+  },
 });
 ```
 
@@ -67,8 +148,8 @@ WIP
 ## TODO
 
 - [x] Facebook Ads channel
-- [ ] Google Ads channel
-- [ ] Twitter Ads channel
+- [x] Google Ads channel
+- [x] Twitter Ads channel
 - [ ] Better documentation
 - [ ] Better typing
 - [ ] Add logs

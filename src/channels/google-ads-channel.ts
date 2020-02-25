@@ -58,17 +58,25 @@ export class GoogleAdsChannel extends Channel {
   private customer!: CustomerInstance;
   protected defaultValues: GoogleAdsDefaultData = {};
 
-  constructor(readonly id: string, private config: GoogleAdsChannelConfig) {
+  constructor(readonly id: string, private config?: GoogleAdsChannelConfig) {
     super(id);
 
-    this.updateClient();
+    if (config) {
+      this.updateClient();
+    }
   }
 
   public async createAd(data: any): Promise<any> {
+    if (!this.customer) {
+      throw new Error('Channel has not been configured yet');
+    }
     throw new Error('Not implemented yet');
   }
 
   public async createCampaign(data: GoogleAdsCampaignData): Promise<string> {
+    if (!this.customer || !this.config?.customerAccountId) {
+      throw new Error('Channel has not been configured yet');
+    }
     const prefixResourceName = `customers/${this.config.customerAccountId.replace(/-/g, '')}`;
     let initialIndex = -randomNumber();
     const newCampaignBudgetId = initialIndex--;
@@ -189,10 +197,16 @@ export class GoogleAdsChannel extends Channel {
   }
 
   public async createCustomAudience(data: any) {
+    if (!this.customer) {
+      throw new Error('Channel has not been configured yet');
+    }
     throw new Error('Not implemented yet');
   }
 
   public async createCustomAudienceUsers(customAudienceId: string, data: any) {
+    if (!this.customer) {
+      throw new Error('Channel has not been configured yet');
+    }
     throw new Error('Not implemented yet');
   }
 
@@ -387,6 +401,9 @@ export class GoogleAdsChannel extends Channel {
   }
 
   private updateClient() {
+    if (!this.config) {
+      throw new Error('Channel has not been configured yet');
+    }
     this.client = new GoogleAdsApi({
       client_id: this.config.clientId,
       client_secret: this.config.clientSecret,

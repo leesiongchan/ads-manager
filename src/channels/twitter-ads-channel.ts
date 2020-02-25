@@ -60,13 +60,18 @@ export class TwitterAdsChannel extends Channel {
   private apiUrlPrefix!: string;
   private twitterAdsClient: typeof Twitter;
 
-  constructor(readonly id: string, private config: TwitterAdsChannelConfig) {
+  constructor(readonly id: string, private config?: TwitterAdsChannelConfig) {
     super(id);
 
-    this.updateClient();
+    if (config) {
+      this.updateClient();
+    }
   }
 
   public async createAd(data: TwitterAdsTweetData): Promise<any> {
+    if (!this.twitterAdsClient) {
+      throw new Error('Channel has not been configured yet');
+    }
     const mediaKeys = await Promise.all(
       data.mediaUrls.map(async (mediaUrl, index) => {
         this.getLogger()?.info(`Uploading media (${index + 1}/${data.mediaUrls.length})...`);
@@ -94,6 +99,9 @@ export class TwitterAdsChannel extends Channel {
   }
 
   public async createCampaign(data: TwitterAdsCampaignData): Promise<string> {
+    if (!this.twitterAdsClient) {
+      throw new Error('Channel has not been configured yet');
+    }
     if (!data.tweetId && !data.tweet) {
       throw new Error('`tweetId` or `tweet` is not defined');
     }
@@ -163,6 +171,9 @@ export class TwitterAdsChannel extends Channel {
   }
 
   public async createCustomAudience(data: TwitterTailoredAudienceData) {
+    if (!this.twitterAdsClient) {
+      throw new Error('Channel has not been configured yet');
+    }
     const tailoredAudienceData = {
       name: data.name,
     };
@@ -176,6 +187,9 @@ export class TwitterAdsChannel extends Channel {
   }
 
   public async createCustomAudienceUsers(customAudienceId: string, data: TwitterAdsTailoredAudienceUserData) {
+    if (!this.twitterAdsClient) {
+      throw new Error('Channel has not been configured yet');
+    }
     this.getLogger()?.info(`Adding ${data.users.length} users to the Tailored Audience...`);
     const { data: tailoredAudienceUsers } = await this.twitterAdsClient.postJSON(
       `${this.apiUrlPrefix}/tailored_audiences/${customAudienceId}/users`,
@@ -297,11 +311,17 @@ export class TwitterAdsChannel extends Channel {
   }
 
   private updateClient() {
+    if (!this.config) {
+      throw new Error('Channel has not been configured yet');
+    }
     this.twitterAdsClient = this.setupClient(this.config);
     this.apiUrlPrefix = `accounts/${this.config.adAccountId}`;
   }
 
   private async uploadMedia(data: TwitterMediaData) {
+    if (!this.config) {
+      throw new Error('Channel has not been configured yet');
+    }
     const iriPrefix = `media/upload`;
     const uploadClient = this.setupClient({
       ...this.config,

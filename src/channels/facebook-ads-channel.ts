@@ -46,13 +46,18 @@ export class FacebookAdsChannel extends Channel {
   private adAccount: facebookBizSdk.AdAccount;
   protected defaultValues: FacebookAdsDefaultData = {};
 
-  constructor(readonly id: string, private config: FacebookAdsChannelConfig) {
+  constructor(readonly id: string, private config?: FacebookAdsChannelConfig) {
     super(id);
 
-    this.updateClient();
+    if (config) {
+      this.updateClient();
+    }
   }
 
   public async createAd({ imageUrl, ...data }: FacebookAdsAdCreativeData) {
+    if (!this.adAccount) {
+      throw new Error('Channel has not been configured yet');
+    }
     const image = (await httpClient(imageUrl, { responseType: 'buffer' })).body;
     const adImageData = {
       bytes: image.toString('base64'),
@@ -74,6 +79,9 @@ export class FacebookAdsChannel extends Channel {
   }
 
   public async createCampaign(data: FacebookAdsCampaignData) {
+    if (!this.adAccount) {
+      throw new Error('Channel has not been configured yet');
+    }
     if (!data.adCreativeIds && !data.adCreatives) {
       throw new Error('`adCreativeIds` or `adCreatives` is not defined');
     }
@@ -151,6 +159,9 @@ export class FacebookAdsChannel extends Channel {
   }
 
   public async createCustomAudience(data: FacebookCustomAudienceData) {
+    if (!this.adAccount) {
+      throw new Error('Channel has not been configured yet');
+    }
     const customAudienceData = this.composeCustomAudienceData(data);
     this.getLogger()?.info(customAudienceData, `Creating Custom Audience...`);
     const customAudience = await this.adAccount.createCustomAudience([], customAudienceData);
@@ -159,6 +170,9 @@ export class FacebookAdsChannel extends Channel {
   }
 
   public async createCustomAudienceUsers(customAudienceId: string, data: FacebookAdsCustomAudienceUserData) {
+    if (!this.adAccount) {
+      throw new Error('Channel has not been configured yet');
+    }
     const customAudience = new facebookBizSdk.CustomAudience(customAudienceId);
     const customAudienceUserData = this.composeCustomAudienceUserData(data);
     this.getLogger()?.info(`Adding ${data.users.length} users to the Custom Audience...`);
@@ -251,6 +265,9 @@ export class FacebookAdsChannel extends Channel {
   }
 
   private updateClient() {
+    if (!this.config) {
+      throw new Error('Channel has not been configured yet');
+    }
     facebookBizSdk.FacebookAdsApi.init(this.config.accessToken);
     this.adAccount = new facebookBizSdk.AdAccount(this.config.adAccountId);
   }

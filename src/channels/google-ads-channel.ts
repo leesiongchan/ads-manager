@@ -1,5 +1,6 @@
-import { CustomerInstance, enums, GoogleAdsApi, types } from 'google-ads-api';
+import { CustomerInstance, enums, getEnumString, GoogleAdsApi, types } from 'google-ads-api';
 import { DeepPartial } from 'ts-essentials';
+import { MutateResourceOperation } from 'google-ads-api/build/types';
 import { formatISO, parseISO } from 'date-fns';
 import { snakeCase } from 'change-case';
 
@@ -9,6 +10,7 @@ import {
   GoogleAdGroupAdData,
   GoogleAdGroupCriteriaData,
   GoogleAdGroupData,
+  GoogleAdvertisingChannelType,
   GoogleBiddingStrategyConfig,
   GoogleBiddingStrategyType,
   GoogleCampaignBudgetData,
@@ -61,7 +63,7 @@ export class GoogleAdsChannel extends Channel {
   constructor(readonly id: string, private config?: GoogleAdsChannelConfig) {
     super(id);
 
-    if (config && this.requiredConfigKeys.every(key => Object.keys(config).includes(key))) {
+    if (config && this.requiredConfigKeys.every(key => config[key])) {
       this.updateClient();
     }
   }
@@ -70,14 +72,14 @@ export class GoogleAdsChannel extends Channel {
     return ['clientId', 'clientSecret', 'customerAccountId', 'developerToken', 'refreshToken'];
   }
 
-  public async createAd(data: any): Promise<any> {
+  public async createAd(data: any) {
     if (!this.customer) {
       throw new Error('Channel has not been configured yet');
     }
     throw new Error('Not implemented yet');
   }
 
-  public async createCampaign(data: GoogleAdsCampaignData): Promise<string> {
+  public async createCampaign(data: GoogleAdsCampaignData) {
     if (!this.customer || !this.config?.customerAccountId) {
       throw new Error('Channel has not been configured yet');
     }
@@ -200,6 +202,153 @@ export class GoogleAdsChannel extends Channel {
     return campaignResourceName;
   }
 
+  public async updateCampaign(campaignResourceName: string, data: Partial<Omit<GoogleAdsCampaignData, 'adGroupAd'>>) {
+    if (!this.customer) {
+      throw new Error('Channel has not been configured yet');
+    }
+
+    this.getLogger()?.info(`Updating Campaign... -> ${campaignResourceName}`);
+
+    const campaign = await this.customer.campaigns.get(campaignResourceName);
+    // We only support for 1 Ad Group for now
+    const [adGroup] = (
+      await this.customer.adGroups.list({
+        constraints: [
+          {
+            key: 'ad_group.campaign',
+            op: '=',
+            val: campaignResourceName,
+          },
+        ],
+      })
+    ).map(res => res.ad_group);
+
+    const mutateResources: MutateResourceOperation[] = [];
+
+    // WIP
+    // if (data.adGroupAd) {
+    //   mutateResources.push({
+    //     ...this.composeAdGroupAdMutateResource({
+    //       ...data.adGroupAd,
+    //       adGroupResourceName: adGroup.resource_name as string,
+    //       advertisingChannelType: getEnumString(
+    //         'AdvertisingChannelType',
+    //         campaign.advertising_channel_type as number,
+    //       ) as GoogleAdvertisingChannelType,
+    //       // imageAssetResourceNames: imageMutateResources.map(resource => resource.resource_name!),
+    //       // squareImageAssetResourceNames: squareImageMutateResources.map(resource => resource.resource_name!),
+    //     }),
+    //     _resource: 'AdGroupAd',
+    //   });
+    // }
+
+    if (data.adGroupCriteria) {
+      // We are going to delete all and recreate them
+      const adGroupCriteria = (
+        await this.customer.adGroupCriteria.list({
+          constraints: [
+            {
+              key: 'ad_group_criterion.ad_group',
+              op: '=',
+              val: adGroup.resource_name,
+            },
+          ],
+        })
+      ).map(res => res.ad_group_criterion);
+
+      // Deletes all the ad group criteria
+      mutateResources.push(
+        ...adGroupCriteria.map<MutateResourceOperation>(adGroupCriterion => ({
+          _operation: 'delete',
+          _resource: 'AdGroupCriterion',
+          resource_name: adGroupCriterion.resource_name,
+        })),
+      );
+
+      // Recreates campaign criteria
+      const adGroupCriterionMutateResources = await this.composeAdGroupCriterionMutateResources({
+        ...data.adGroupCriteria,
+        adGroupResourceName: adGroup.resource_name as string,
+      });
+      mutateResources.push(
+        ...adGroupCriterionMutateResources.map(mutateResource => ({
+          ...mutateResource,
+          _resource: 'AdGroupCriterion',
+        })),
+      );
+    }
+
+    if (data.campaign) {
+      mutateResources.push({
+        ...this.composeCampaignMutateResource(data.campaign as GoogleCampaignData),
+        _operation: 'update',
+        _resource: 'Campaign',
+        resource_name: campaignResourceName,
+      });
+    }
+
+    if (data.campaignBudget) {
+      mutateResources.push({
+        ...this.composeCampaignBudgetMutateResource(data.campaignBudget as GoogleCampaignBudgetData),
+        _operation: 'update',
+        _resource: 'CampaignBudget',
+        resource_name: campaign.campaign_budget,
+      });
+    }
+
+    if (data.campaignCriteria) {
+      // We are going to delete all and recreate them
+      const campaignCriteria = (
+        await this.customer.campaignCriteria.list({
+          constraints: [
+            {
+              key: 'campaign_criterion.campaign',
+              op: '=',
+              val: campaignResourceName,
+            },
+          ],
+        })
+      ).map(res => res.campaign_criterion);
+
+      // Deletes all the campaign criteria
+      mutateResources.push(
+        ...campaignCriteria.map<MutateResourceOperation>(campaignCriterion => ({
+          _operation: 'delete',
+          _resource: 'CampaignCriterion',
+          resource_name: campaignCriterion.resource_name,
+        })),
+      );
+
+      // Recreates campaign criteria
+      const campaignCriterionMutateResources = await this.composeCampaignCriterionMutateResources({
+        ...data.campaignCriteria,
+        campaignResourceName,
+      });
+      mutateResources.push(
+        ...campaignCriterionMutateResources.map(mutateResource => ({
+          ...mutateResource,
+          _resource: 'CampaignCriterion',
+        })),
+      );
+    }
+
+    if (data.name || data.status) {
+      mutateResources.push({
+        _operation: 'update',
+        _resource: 'Campaign',
+        name: data.name,
+        resource_name: campaignResourceName,
+        status: data.status ? enums.CampaignStatus[data.status] : undefined,
+      });
+    }
+
+    await this.customer.mutateResources(mutateResources);
+
+    this.getLogger()?.info(`Campaign has been updated successfully -> ${campaignResourceName}`);
+
+    return campaignResourceName;
+  }
+
   public async createCustomAudience(data: any) {
     if (!this.customer) {
       throw new Error('Channel has not been configured yet');
@@ -214,9 +363,16 @@ export class GoogleAdsChannel extends Channel {
     throw new Error('Not implemented yet');
   }
 
+  public async deleteCustomAudienceUsers(customAudienceId: string, data: any) {
+    if (!this.customer) {
+      throw new Error('Channel has not been configured yet');
+    }
+    throw new Error('Not implemented yet');
+  }
+
   public setConfig(config: Partial<GoogleAdsChannelConfig>) {
     Object.assign(this.config, config);
-    if (this.config && this.requiredConfigKeys.every(key => this.config && Object.keys(this.config).includes(key))) {
+    if (this.config && this.requiredConfigKeys.every(key => this.config?.[key])) {
       this.updateClient();
     }
   }
@@ -407,7 +563,7 @@ export class GoogleAdsChannel extends Channel {
   }
 
   private updateClient() {
-    if (!this.config || !this.requiredConfigKeys.every(key => this.config && Object.keys(this.config).includes(key))) {
+    if (!this.config || !this.requiredConfigKeys.every(key => this.config?.[key])) {
       throw new Error('Channel has not been configured yet');
     }
     this.client = new GoogleAdsApi({

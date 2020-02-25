@@ -18,12 +18,13 @@ export abstract class Channel {
   public abstract createAd(data: any): Promise<any>;
 
   public abstract createCampaign(data: any): Promise<any>;
-  // public abstract updateCampaign(campaignId: string, data);
+  public abstract updateCampaign(campaignId: string, data: any): Promise<any>;
   // public abstract updateCampaignStatus(campaignId: string, status: string);
   // public abstract deleteCampaign(campaignId: string);
 
   public abstract createCustomAudience(data: any): Promise<any>;
   public abstract createCustomAudienceUsers(customAudienceId: string, data: CustomAudienceUserData): Promise<any>;
+  public abstract deleteCustomAudienceUsers(customAudienceId: string, data: CustomAudienceUserData): Promise<any>;
 
   public abstract setDefaultValues(defaultValues: any): void;
 

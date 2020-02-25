@@ -1095,6 +1095,7 @@ __metadata:
     facebook-nodejs-business-sdk: ^6.0.0
     google-ads-api: ^3.5.0
     got: ^10.6.0
+    http2-wrapper: ^1.0.0-beta.4
     js-sha256: ^0.9.0
     microbundle: next
     mime-types: ^2.1.26
@@ -3383,6 +3384,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"http2-wrapper@npm:^1.0.0-beta.4":
+  version: 1.0.0-beta.4
+  resolution: "http2-wrapper@npm:1.0.0-beta.4"
+  dependencies:
+    quick-lru: ^5.0.0
+    resolve-alpn: ^1.0.0
+  checksum: 2/33e43b1ff5b05c4accf0a5a63bee999534618ae74c24f619acd32e529ffd7ea5271ff46c45a455cd641427dc26ca6f0cce015ced8aedfc0d2e12ceb26780f801
+  languageName: node
+  linkType: hard
+
 "https-proxy-agent@npm:^2.2.1":
   version: 2.2.4
   resolution: "https-proxy-agent@npm:2.2.4"
@@ -5297,6 +5308,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"quick-lru@npm:^5.0.0":
+  version: 5.0.0
+  resolution: "quick-lru@npm:5.0.0"
+  checksum: 2/ee87c6b399d60f12191e51090b70b3d6867e13e2aba102f1a5e82f96d140f30992bc6ac3d21e811a9b165b7cd4d6040ec85c2c629b0aa3a326612f9fc26db74d
+  languageName: node
+  linkType: hard
+
 "rc@npm:^1.2.7":
   version: 1.2.8
   resolution: "rc@npm:1.2.8"
@@ -5518,6 +5536,13 @@ __metadata:
   version: 0.1.2
   resolution: "reserved-words@npm:0.1.2"
   checksum: 2/39b630853f18b72230bd6a6d6572a2f3cc6b17975f5edec58ab73f8f2e3da6a31877fb043a674f692fbefa9971c55c65080414072673fa29788483fa2f20971c
+  languageName: node
+  linkType: hard
+
+"resolve-alpn@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "resolve-alpn@npm:1.0.0"
+  checksum: 2/17baee01c03a57cebd163aa5c9bd94f33646378bce8aa94c7a8d29fc0e1bf0807532bda3c36bb929511606633921d0f4a69e7fcc894cf02ad1c742e649b71673
   languageName: node
   linkType: hard
 

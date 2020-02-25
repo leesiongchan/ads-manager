@@ -1,6 +1,6 @@
 {
   "name": "@leesiongchan/ads-manager",
-  "version": "0.0.6",
+  "version": "0.0.12",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/leesiongchan/ads-manager.git",
@@ -30,6 +30,7 @@
     "facebook-nodejs-business-sdk": "^6.0.0",
     "google-ads-api": "^3.5.0",
     "got": "^10.6.0",
+    "http2-wrapper": "^1.0.0-beta.4",
     "js-sha256": "^0.9.0",
     "mime-types": "^2.1.26",
     "pino": "^5.16.0",

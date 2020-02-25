@@ -49,7 +49,7 @@ export class FacebookAdsChannel extends Channel {
   constructor(readonly id: string, private config?: FacebookAdsChannelConfig) {
     super(id);
 
-    if (config && this.requiredConfigKeys.every(key => Object.keys(config).includes(key))) {
+    if (config && this.requiredConfigKeys.every(key => config[key])) {
       this.updateClient();
     }
   }
@@ -162,6 +162,41 @@ export class FacebookAdsChannel extends Channel {
     return campaign;
   }
 
+  public async updateCampaign(
+    campaignId: string,
+    data: Partial<Pick<FacebookAdsCampaignData, 'adSet' | 'campaign' | 'name' | 'status'>>,
+  ) {
+    if (!this.adAccount) {
+      throw new Error('Channel has not been configured yet');
+    }
+
+    const campaign = new facebookBizSdk.Campaign(campaignId);
+
+    if (data.adSet) {
+      // We only support for 1 Ad Set for now
+      const [adSet] = await campaign.getAdSets();
+      const adSetData = this.composeAdSetData(data.adSet as FacebookAdSetData);
+      this.getLogger()?.info(adSetData, `Updating Ad Set... -> ${adSet.id}`);
+      await adSet.update([], adSetData);
+    }
+
+    if (data.campaign) {
+      const campaignData = this.composeCampaignData(data.campaign as FacebookCampaignData);
+      this.getLogger()?.info(campaignData, `Updating Campaign... -> ${campaignId}`);
+      await campaign.update([], campaignData);
+    }
+
+    if (data.name || data.status) {
+      const campaignData = { name: data.name, status: data.status };
+      this.getLogger()?.info(campaignData, `Updating Campaign name and status... -> ${campaignId}`);
+      await campaign.update([], campaignData);
+    }
+
+    this.getLogger()?.info(`Campaign has been updated successfully -> ${campaignId}`);
+
+    return campaign.get();
+  }
+
   public async createCustomAudience(data: FacebookCustomAudienceData) {
     if (!this.adAccount) {
       throw new Error('Channel has not been configured yet');
@@ -169,6 +204,7 @@ export class FacebookAdsChannel extends Channel {
     const customAudienceData = this.composeCustomAudienceData({
       ...this.defaultValues.customAudience,
       ...data,
+      subtype: 'CUSTOM',
     });
     this.getLogger()?.info(customAudienceData, `Creating Custom Audience...`);
     const customAudience = await this.adAccount.createCustomAudience([], customAudienceData);
@@ -188,9 +224,23 @@ export class FacebookAdsChannel extends Channel {
     return customAudienceUser;
   }
 
+  public async deleteCustomAudienceUsers(customAudienceId: string, data: FacebookAdsCustomAudienceUserData) {
+    if (!this.adAccount) {
+      throw new Error('Channel has not been configured yet');
+    }
+    const customAudience = new facebookBizSdk.CustomAudience(customAudienceId);
+    const customAudienceUserData = this.composeCustomAudienceUserData(data);
+    this.getLogger()?.info(`Deleting ${data.users.length} users from the Custom Audience...`);
+    const customAudienceUser = await customAudience.deleteUsers(customAudienceUserData);
+    this.getLogger()?.info(
+      `${data.users.length} users have been deleted from the Custom Audience -> ${customAudienceId}`,
+    );
+    return customAudienceUser;
+  }
+
   public setConfig(config: Partial<FacebookAdsChannelConfig>) {
     Object.assign(this.config, config);
-    if (this.config && this.requiredConfigKeys.every(key => this.config && Object.keys(this.config).includes(key))) {
+    if (this.config && this.requiredConfigKeys.every(key => this.config?.[key])) {
       this.updateClient();
     }
   }
@@ -274,7 +324,7 @@ export class FacebookAdsChannel extends Channel {
   }
 
   private updateClient() {
-    if (!this.config || !this.requiredConfigKeys.every(key => this.config && Object.keys(this.config).includes(key))) {
+    if (!this.config || !this.requiredConfigKeys.every(key => this.config?.[key])) {
       throw new Error('Channel has not been configured yet');
     }
     facebookBizSdk.FacebookAdsApi.init(this.config.accessToken);

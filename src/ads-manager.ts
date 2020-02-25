@@ -19,18 +19,16 @@ export class AdsManager<T extends Channel> {
       prettyPrint: { colorize: true },
     });
     this.channels = config.channels;
-    this.channels.forEach(channel => {
-      channel.setLogger(this.logger);
-    });
   }
 
   public addChannel(channel: T) {
-    channel.setLogger(this.logger);
     this.channels.push(channel);
   }
 
   public use<U extends T>(channelId: string): U | undefined {
-    return this.channels.find(channel => channel.getId() === channelId) as U;
+    const channel = this.channels.find(c => c.getId() === channelId) as U;
+    channel.setLogger(this.logger);
+    return channel;
   }
 }
 

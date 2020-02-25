@@ -1,6 +1,6 @@
 {
   "name": "@leesiongchan/ads-manager",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/leesiongchan/ads-manager.git",
@@ -20,7 +20,7 @@
   "source": "src/index.ts",
   "main": "dist/ads-manager.js",
   "module": "dist/ads-manager.esm.js",
-  "types": "dist/ads-manager.d.ts",
+  "types": "dist/src/index.d.ts",
   "scripts": {
     "build": "microbundle -f es,cjs --target node"
   },

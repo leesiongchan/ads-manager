@@ -49,9 +49,13 @@ export class FacebookAdsChannel extends Channel {
   constructor(readonly id: string, private config?: FacebookAdsChannelConfig) {
     super(id);
 
-    if (config) {
+    if (config && this.requiredConfigKeys.every(key => Object.keys(config).includes(key))) {
       this.updateClient();
     }
+  }
+
+  private get requiredConfigKeys(): (keyof FacebookAdsChannelConfig)[] {
+    return ['accessToken', 'adAccountId'];
   }
 
   public async createAd({ imageUrl, ...data }: FacebookAdsAdCreativeData) {
@@ -162,7 +166,10 @@ export class FacebookAdsChannel extends Channel {
     if (!this.adAccount) {
       throw new Error('Channel has not been configured yet');
     }
-    const customAudienceData = this.composeCustomAudienceData(data);
+    const customAudienceData = this.composeCustomAudienceData({
+      ...this.defaultValues.customAudience,
+      ...data,
+    });
     this.getLogger()?.info(customAudienceData, `Creating Custom Audience...`);
     const customAudience = await this.adAccount.createCustomAudience([], customAudienceData);
     this.getLogger()?.info(`Custom Audience has been created successfully -> ${customAudience.id}`);
@@ -179,6 +186,13 @@ export class FacebookAdsChannel extends Channel {
     const customAudienceUser = await customAudience.createUser([], customAudienceUserData);
     this.getLogger()?.info(`${data.users.length} users have been added to the Custom Audience -> ${customAudienceId}`);
     return customAudienceUser;
+  }
+
+  public setConfig(config: Partial<FacebookAdsChannelConfig>) {
+    Object.assign(this.config, config);
+    if (this.config && this.requiredConfigKeys.every(key => this.config && Object.keys(this.config).includes(key))) {
+      this.updateClient();
+    }
   }
 
   public setDefaultValues(defaultValues: FacebookAdsDefaultData) {
@@ -259,13 +273,8 @@ export class FacebookAdsChannel extends Channel {
     };
   }
 
-  public setConfig(config: Partial<FacebookAdsChannelConfig>) {
-    Object.assign(this.config, config);
-    this.updateClient();
-  }
-
   private updateClient() {
-    if (!this.config) {
+    if (!this.config || !this.requiredConfigKeys.every(key => this.config && Object.keys(this.config).includes(key))) {
       throw new Error('Channel has not been configured yet');
     }
     facebookBizSdk.FacebookAdsApi.init(this.config.accessToken);

@@ -61,9 +61,13 @@ export class GoogleAdsChannel extends Channel {
   constructor(readonly id: string, private config?: GoogleAdsChannelConfig) {
     super(id);
 
-    if (config) {
+    if (config && this.requiredConfigKeys.every(key => Object.keys(config).includes(key))) {
       this.updateClient();
     }
+  }
+
+  private get requiredConfigKeys(): (keyof GoogleAdsChannelConfig)[] {
+    return ['clientId', 'clientSecret', 'customerAccountId', 'developerToken', 'refreshToken'];
   }
 
   public async createAd(data: any): Promise<any> {
@@ -208,6 +212,13 @@ export class GoogleAdsChannel extends Channel {
       throw new Error('Channel has not been configured yet');
     }
     throw new Error('Not implemented yet');
+  }
+
+  public setConfig(config: Partial<GoogleAdsChannelConfig>) {
+    Object.assign(this.config, config);
+    if (this.config && this.requiredConfigKeys.every(key => this.config && Object.keys(this.config).includes(key))) {
+      this.updateClient();
+    }
   }
 
   public setDefaultValues(defaultValues: GoogleAdsDefaultData) {
@@ -395,13 +406,8 @@ export class GoogleAdsChannel extends Channel {
     );
   }
 
-  public setConfig(config: Partial<GoogleAdsChannelConfig>) {
-    Object.assign(this.config, config);
-    this.updateClient();
-  }
-
   private updateClient() {
-    if (!this.config) {
+    if (!this.config || !this.requiredConfigKeys.every(key => this.config && Object.keys(this.config).includes(key))) {
       throw new Error('Channel has not been configured yet');
     }
     this.client = new GoogleAdsApi({

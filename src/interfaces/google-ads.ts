@@ -58,3 +58,9 @@ export interface GoogleCampaignCriteriaData {
   languageCodes?: string[];
   locationCountryCodes?: string[];
 }
+
+export interface GoogleUserListData {
+  description?: string;
+  membershipLifeSpan?: number;
+  name: string;
+}

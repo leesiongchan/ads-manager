@@ -19,8 +19,8 @@ export abstract class Channel {
 
   public abstract createCampaign(data: any): Promise<any>;
   public abstract updateCampaign(campaignId: string, data: any): Promise<any>;
-  // public abstract updateCampaignStatus(campaignId: string, status: string);
-  // public abstract deleteCampaign(campaignId: string);
+  public abstract updateCampaignStatus(campaignId: string, status: string): Promise<any>;
+  public abstract deleteCampaign(campaignId: string): Promise<any>;
 
   public abstract createCustomAudience(data: any): Promise<any>;
   public abstract createCustomAudienceUsers(customAudienceId: string, data: CustomAudienceUserData): Promise<any>;

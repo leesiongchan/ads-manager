@@ -1,10 +1,13 @@
-import { CustomerInstance, enums, getEnumString, GoogleAdsApi, types } from 'google-ads-api';
+// @ts-ignore
+import { AdwordsUser } from 'node-adwords';
+import { CustomerInstance, enums, GoogleAdsApi, types } from 'google-ads-api';
 import { DeepPartial } from 'ts-essentials';
 import { MutateResourceOperation } from 'google-ads-api/build/types';
 import { formatISO, parseISO } from 'date-fns';
+import { sha256 } from 'js-sha256';
 import { snakeCase } from 'change-case';
 
-import Channel from './channel';
+import Channel, { CustomAudienceUserData } from './channel';
 import httpClient from '../utils/http-client';
 import {
   GoogleAdGroupAdData,
@@ -18,8 +21,10 @@ import {
   GoogleCampaignData,
   GoogleCampaignStatus,
   GoogleImageAssetsData,
+  GoogleUserListData,
 } from '../interfaces/google-ads';
 import { convertMinorToMicroUnit } from '../utils/money-converter';
+import { normalizeEmail } from '../utils/normalizer';
 import { randomNumber } from '../utils/randomizer';
 
 type GoogleAdsDefaultData = DeepPartial<
@@ -54,6 +59,10 @@ interface GoogleAdsAdGroupAdData
   imageUrls: string[];
   squareImageUrls: string[];
 }
+
+interface GoogleUserListUserData extends CustomAudienceUserData {}
+
+const ADWORDS_API_VERSION = 'v201809';
 
 export class GoogleAdsChannel extends Channel {
   private client!: GoogleAdsApi;
@@ -349,21 +358,85 @@ export class GoogleAdsChannel extends Channel {
     return campaignResourceName;
   }
 
-  public async createCustomAudience(data: any) {
+  public async updateCampaignStatus(campaignResourceName: string, status: GoogleCampaignStatus) {
     if (!this.customer) {
       throw new Error('Channel has not been configured yet');
     }
-    throw new Error('Not implemented yet');
+    this.getLogger()?.info(`Updating Campaign status to ${status}... -> ${campaignResourceName}`);
+    await this.customer.campaigns.update({
+      resource_name: campaignResourceName,
+      status: enums.CampaignStatus[status],
+    });
+    this.getLogger()?.info(`Campaign status has been updated successfully -> ${campaignResourceName}`);
+    return campaignResourceName;
   }
 
-  public async createCustomAudienceUsers(customAudienceId: string, data: any) {
+  public async deleteCampaign(campaignResourceName: string) {
     if (!this.customer) {
       throw new Error('Channel has not been configured yet');
     }
-    throw new Error('Not implemented yet');
+    this.getLogger()?.info(`Deleting Campaign... -> ${campaignResourceName}`);
+    await this.customer.campaigns.delete(campaignResourceName);
+    this.getLogger()?.info(`Campaign has been deleted successfully -> ${campaignResourceName}`);
+    return campaignResourceName;
   }
 
-  public async deleteCustomAudienceUsers(customAudienceId: string, data: any) {
+  public async createCustomAudience(data: GoogleUserListData) {
+    if (!this.customer) {
+      throw new Error('Channel has not been configured yet');
+    }
+    const userListData = this.composeUserListData(data);
+    this.getLogger()?.info(userListData, `Creating User List...`);
+    const response = await this.customer.userLists.create(userListData);
+    const userListResourceName = response.results[0];
+    this.getLogger()?.info(`User List has been created successfully -> ${userListResourceName}`);
+    return userListResourceName;
+  }
+
+  public async createCustomAudienceUsers(userListId: string, data: GoogleUserListUserData) {
+    if (!this.config || !this.requiredConfigKeys.every(key => this.config?.[key])) {
+      throw new Error('Channel has not been configured yet');
+    }
+    this.getLogger()?.info(`Adding ${data.users.length} users to the User List...`);
+    // TODO: Upgrade this to use Google Ads API instead of Adwords API
+    const adwordsUser = new AdwordsUser({
+      refresh_token: this.config.refreshToken,
+      clientCustomerId: this.config.customerAccountId,
+      client_id: this.config.clientId,
+      client_secret: this.config.clientSecret,
+      developerToken: this.config.developerToken,
+    });
+    const userListService = adwordsUser.getService('AdwordsUserListService', ADWORDS_API_VERSION);
+    const { userLists } = await new Promise((resolve, reject) => {
+      userListService.mutateMembers(
+        {
+          operations: [
+            {
+              operator: 'ADD',
+              operand: {
+                userListId,
+                membersList: data.users.map(user => ({
+                  hashedEmail: sha256(normalizeEmail(user.email)),
+                  hashedPhoneNumber: user.phone ? sha256(user.phone) : undefined,
+                })),
+              },
+            },
+          ],
+        },
+        (error: any, result: { userLists: any[] }) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(result);
+          }
+        },
+      );
+    });
+    this.getLogger()?.info(`${data.users.length} users have been added to the User List -> ${userListId}`);
+    return userLists;
+  }
+
+  public async deleteCustomAudienceUsers(customAudienceId: string, data: GoogleUserListUserData) {
     if (!this.customer) {
       throw new Error('Channel has not been configured yet');
     }
@@ -379,23 +452,6 @@ export class GoogleAdsChannel extends Channel {
 
   public setDefaultValues(defaultValues: GoogleAdsDefaultData) {
     this.defaultValues = defaultValues;
-  }
-
-  private biddingStrategyConfigMapper(config: GoogleBiddingStrategyConfig, biddingStrategy: GoogleBiddingStrategyType) {
-    switch (biddingStrategy) {
-      case 'TARGET_SPEND':
-        return { cpc_bid_ceiling_micros: config.cpcBidCeilingAmount };
-
-      case 'TARGET_IMPRESSION_SHARE':
-        return {
-          cpc_bid_ceiling_micros: config.cpcBidCeilingAmount,
-          location: enums.TargetImpressionShareLocation.ANYWHERE_ON_PAGE,
-          location_fraction_micros: 1000000, // 100%
-        };
-
-      default:
-        return {};
-    }
   }
 
   private composeAdGroupMutateResource(data: GoogleAdGroupData): types.AdGroup {
@@ -495,7 +551,7 @@ export class GoogleAdsChannel extends Channel {
   private composeCampaignMutateResource(data: GoogleCampaignData): types.Campaign {
     return {
       [snakeCase(data.biddingStrategyType)]: data.biddingStrategyConfig
-        ? this.biddingStrategyConfigMapper(data.biddingStrategyConfig, data.biddingStrategyType)
+        ? this.getBiddingStrategyConfig(data.biddingStrategyConfig, data.biddingStrategyType)
         : {},
       advertising_channel_type: enums.AdvertisingChannelType[data.advertisingChannelType],
       bidding_strategy_type: enums.BiddingStrategyType[data.biddingStrategyType],
@@ -560,6 +616,38 @@ export class GoogleAdsChannel extends Channel {
         type: enums.AssetType.IMAGE,
       })),
     );
+  }
+
+  private composeUserListData(data: GoogleUserListData): types.UserList {
+    return {
+      crm_based_user_list: {
+        upload_key_type: enums.CustomerMatchUploadKeyType.CRM_ID,
+      },
+      access_reason: enums.AccessReason.OWNED,
+      account_user_list_status: enums.UserListAccessStatus.ENABLED,
+      description: data.description,
+      membership_life_span: data.membershipLifeSpan, // 10000 = no expiration
+      membership_status: enums.UserListMembershipStatus.OPEN,
+      name: data.name,
+      type: enums.UserListType.CRM_BASED,
+    };
+  }
+
+  private getBiddingStrategyConfig(config: GoogleBiddingStrategyConfig, biddingStrategy: GoogleBiddingStrategyType) {
+    switch (biddingStrategy) {
+      case 'TARGET_SPEND':
+        return { cpc_bid_ceiling_micros: config.cpcBidCeilingAmount };
+
+      case 'TARGET_IMPRESSION_SHARE':
+        return {
+          cpc_bid_ceiling_micros: config.cpcBidCeilingAmount,
+          location: enums.TargetImpressionShareLocation.ANYWHERE_ON_PAGE,
+          location_fraction_micros: 1000000, // 100%
+        };
+
+      default:
+        return {};
+    }
   }
 
   private updateClient() {

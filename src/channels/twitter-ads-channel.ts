@@ -111,6 +111,9 @@ export class TwitterAdsChannel extends Channel {
     if (!data.tweetId && !data.tweet) {
       throw new Error('`tweetId` or `tweet` is not defined');
     }
+    if (!data.tailoredAudienceId) {
+      throw new Error('`tailoredAudienceId` is not defined');
+    }
     if (!(await this.isTailoredAudienceMinimumSizeMatched(data.tailoredAudienceId))) {
       throw new Error('The size of the Tailored Audience is too small');
     }
@@ -221,6 +224,24 @@ export class TwitterAdsChannel extends Channel {
     return campaign;
   }
 
+  public async updateCampaignStatus(campaignId: string, status: TwitterCampaignStatus) {
+    if (!this.twitterAdsClient) {
+      throw new Error('Channel has not been configured yet');
+    }
+    this.getLogger()?.info(`Updating Campaign status to ${status}... -> ${campaignId}`);
+    await this.twitterAdsClient.put(`${this.apiUrlPrefix}/campaigns/${campaignId}`, { status });
+    this.getLogger()?.info(`Campaign status has been updated successfully -> ${campaignId}`);
+    return campaignId;
+  }
+
+  public async deleteCampaign(campaignId: string) {
+    if (!this.twitterAdsClient) {
+      throw new Error('Channel has not been configured yet');
+    }
+    // TODO `twitter-lite` does not support delete method
+    throw new Error('Not implemented yet');
+  }
+
   public async createCustomAudience(data: TwitterTailoredAudienceData) {
     if (!this.twitterAdsClient) {
       throw new Error('Channel has not been configured yet');
@@ -237,13 +258,13 @@ export class TwitterAdsChannel extends Channel {
     return tailoredAudience.data;
   }
 
-  public async createCustomAudienceUsers(customAudienceId: string, data: TwitterAdsTailoredAudienceUserData) {
+  public async createCustomAudienceUsers(tailoredAudienceId: string, data: TwitterAdsTailoredAudienceUserData) {
     if (!this.twitterAdsClient) {
       throw new Error('Channel has not been configured yet');
     }
     this.getLogger()?.info(`Adding ${data.users.length} users to the Tailored Audience...`);
     const { data: tailoredAudienceUsers } = await this.twitterAdsClient.postJSON(
-      `${this.apiUrlPrefix}/tailored_audiences/${customAudienceId}/users`,
+      `${this.apiUrlPrefix}/tailored_audiences/${tailoredAudienceId}/users`,
       [
         {
           operation_type: 'Update',
@@ -257,13 +278,13 @@ export class TwitterAdsChannel extends Channel {
         },
       ],
     );
-    super
-      .getLogger()
-      ?.info(`${data.users.length} users have been added to the Tailored Audience -> ${customAudienceId}`);
+    this.getLogger()?.info(
+      `${data.users.length} users have been added to the Tailored Audience -> ${tailoredAudienceId}`,
+    );
     return tailoredAudienceUsers;
   }
 
-  public async deleteCustomAudienceUsers(customAudienceId: string, data: TwitterAdsTailoredAudienceUserData) {
+  public async deleteCustomAudienceUsers(tailoredAudienceId: string, data: TwitterAdsTailoredAudienceUserData) {
     if (!this.twitterAdsClient) {
       throw new Error('Channel has not been configured yet');
     }
@@ -353,7 +374,7 @@ export class TwitterAdsChannel extends Channel {
       subdomain: config.subdomain || ADS_API_SUBDOMAIN,
       version: config.version || ADS_API_VERSION,
     });
-    // Little hack to force JSON request because the official lib doesnt not support
+    // Little hack to force JSON request because the official lib doesn't not support
     // Mostly copy from https://github.com/draftbit/twitter-lite/blob/master/twitter.js#L229
     twitterClient.postJSON = (resource: any, body: any) => {
       const { requestData, headers } = this.twitterAdsClient._makeRequest('POST', resource, null);

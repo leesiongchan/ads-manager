@@ -67,7 +67,7 @@ export class FacebookAdsChannel extends Channel {
       bytes: image.toString('base64'),
       name: path.basename(imageUrl),
     };
-    this.getLogger()?.info({ ...adImageData, bytes: '--skiped--' }, `Creating Ad Image...`);
+    this.getLogger()?.info({ ...adImageData, bytes: '--skipped--' }, `Creating Ad Image...`);
     const adImage = await this.adAccount.createAdImage([], adImageData);
 
     const adCreativeData = this.composeAdCreativeData({
@@ -195,6 +195,28 @@ export class FacebookAdsChannel extends Channel {
     this.getLogger()?.info(`Campaign has been updated successfully -> ${campaignId}`);
 
     return campaign.get();
+  }
+
+  public async updateCampaignStatus(campaignId: string, status: FacebookCampaignStatus) {
+    if (!this.adAccount) {
+      throw new Error('Channel has not been configured yet');
+    }
+    this.getLogger()?.info(`Updating Campaign status to ${status}... -> ${campaignId}`);
+    const campaign = new facebookBizSdk.Campaign(campaignId);
+    await campaign.update([], { status });
+    this.getLogger()?.info(`Campaign status has been updated successfully -> ${campaignId}`);
+    return campaignId;
+  }
+
+  public async deleteCampaign(campaignId: string) {
+    if (!this.adAccount) {
+      throw new Error('Channel has not been configured yet');
+    }
+    this.getLogger()?.info(`Deleting Campaign... -> ${campaignId}`);
+    const campaign = new facebookBizSdk.Campaign(campaignId);
+    await campaign.delete([]);
+    this.getLogger()?.info(`Campaign has been deleted successfully -> ${campaignId}`);
+    return campaignId;
   }
 
   public async createCustomAudience(data: FacebookCustomAudienceData) {

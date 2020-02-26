@@ -272,7 +272,7 @@ export class TwitterAdsChannel extends Channel {
 
   public setConfig(config: Partial<TwitterAdsChannelConfig>) {
     Object.assign(this.config, config);
-    if (config && this.requiredConfigKeys.every(key => config[key])) {
+    if (this.config && this.requiredConfigKeys.every(key => this.config?.[key])) {
       this.updateClient();
     }
   }

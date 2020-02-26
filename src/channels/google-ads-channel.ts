@@ -10,7 +10,7 @@ import {
   GoogleAdGroupAdData,
   GoogleAdGroupCriteriaData,
   GoogleAdGroupData,
-  GoogleAdvertisingChannelType,
+  // GoogleAdvertisingChannelType,
   GoogleBiddingStrategyConfig,
   GoogleBiddingStrategyType,
   GoogleCampaignBudgetData,

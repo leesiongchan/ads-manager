@@ -1,7 +1,5 @@
-import got from 'got';
-// @ts-ignore
-import { request } from 'http2-wrapper';
+import axios from 'axios';
 
-const httpClient = got.extend({ request });
+const httpClient = axios.create();
 
 export default httpClient;

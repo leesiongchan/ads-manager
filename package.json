@@ -22,19 +22,20 @@
   "module": "dist/ads-manager.esm.js",
   "types": "dist/src/index.d.ts",
   "scripts": {
-    "build": "microbundle -f es,cjs --target node"
+    "build": "microbundle -f es,cjs --target node",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "ajv": "^6.12.0",
+    "axios": "^0.19.2",
     "change-case": "^4.1.1",
     "date-fns": "^2.9.0",
     "facebook-nodejs-business-sdk": "^6.0.0",
     "google-ads-api": "^3.5.0",
-    "got": "^10.6.0",
-    "http2-wrapper": "^1.0.0-beta.4",
     "js-sha256": "^0.9.0",
     "mime-types": "^2.1.26",
     "node-adwords": "^201809.0.2",
+    "patch-package": "^6.2.0",
     "pino": "^5.16.0",
     "pino-pretty": "^3.6.0",
     "twitter-lite": "^0.9.4"

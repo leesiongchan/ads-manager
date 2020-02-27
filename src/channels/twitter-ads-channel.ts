@@ -18,6 +18,7 @@ import {
   TwitterTailoredAudienceData,
   TwitterTargetingCriterionData,
   TwitterTweetData,
+  TwitterWebsiteCardData,
 } from '../interfaces/twitter-ads';
 import { convertMinorToMicroUnit } from '../utils/money-converter';
 import { normalizeEmail } from '../utils/normalizer';
@@ -92,9 +93,26 @@ export class TwitterAdsChannel extends Channel {
       }),
     );
 
+    let websiteCardUri;
+    if (data.url) {
+      const websiteCardData = this.composeWebsiteCard({
+        mediaKey: mediaKeys[0],
+        name: data.text,
+        websiteTitle: data.headline || '',
+        websiteUrl: data.url,
+      });
+      this.getLogger()?.info(websiteCardData, `Creating website card...`);
+      const websiteCardResponse = await this.twitterAdsClient.post(
+        `${this.apiUrlPrefix}/cards/website`,
+        websiteCardData,
+      );
+      websiteCardUri = websiteCardResponse.data.card_uri;
+    }
+
     const tweetData = this.composeTweetData({
       ...this.defaultValues.tweet,
       asUserId: data.asUserId,
+      cardUri: websiteCardUri,
       text: data.text,
       mediaKeys,
     });
@@ -189,7 +207,7 @@ export class TwitterAdsChannel extends Channel {
       throw new Error('Channel has not been configured yet');
     }
 
-    // We only support for 1 Ad Set for now
+    // We only support for 1 Line Item for now
     const {
       data: [lineItem],
     } = await this.twitterAdsClient.get(`${this.apiUrlPrefix}/line_items`, {
@@ -197,13 +215,13 @@ export class TwitterAdsChannel extends Channel {
     });
 
     if (data.campaign) {
-      const campaignData = this.composeCampaignData(data.campaign as TwitterCampaignData);
+      const campaignData = this.composeCampaignData(data.campaign as any);
       this.getLogger()?.info(campaignData, `Updating Campaign... -> ${campaignId}`);
       await this.twitterAdsClient.put(`${this.apiUrlPrefix}/campaigns/${campaignId}`, campaignData);
     }
 
     if (data.lineItem) {
-      const lineItemData = this.composeLineItemData(data.lineItem as TwitterLineItemData);
+      const lineItemData = this.composeLineItemData(data.lineItem as any);
       this.getLogger()?.info(lineItemData, `Updating Line Item... -> ${lineItem.id}`);
       await this.twitterAdsClient.put(`${this.apiUrlPrefix}/line_items/${lineItem.id}`, lineItemData);
     }
@@ -346,8 +364,18 @@ export class TwitterAdsChannel extends Channel {
   private composeTweetData(data: TwitterTweetData) {
     return {
       as_user_id: data.asUserId,
+      card_uri: data.cardUri,
       media_keys: data.mediaKeys,
       text: data.text,
+    };
+  }
+
+  private composeWebsiteCard(data: TwitterWebsiteCardData) {
+    return {
+      media_key: data.mediaKey,
+      name: data.name,
+      website_title: data.websiteTitle,
+      website_url: data.websiteUrl,
     };
   }
 

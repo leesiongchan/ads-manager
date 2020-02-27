@@ -1,3 +1,4 @@
+import * as Ajv from 'ajv';
 import * as pino from 'pino';
 
 export interface CustomAudienceUserData {
@@ -12,6 +13,7 @@ export interface CustomAudienceUserInfomationData {
 export abstract class Channel {
   protected defaultValues: any;
   protected logger?: pino.Logger;
+  protected ajv = new Ajv();
 
   constructor(protected readonly id: string) {}
 

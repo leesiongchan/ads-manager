@@ -1090,6 +1090,7 @@ __metadata:
     "@types/mime-types": 2.1.0
     "@types/pino": 5.15.5
     "@yarnpkg/pnpify": ^2.0.0-rc.18
+    ajv: ^6.12.0
     change-case: ^4.1.1
     date-fns: ^2.9.0
     facebook-nodejs-business-sdk: ^6.0.0
@@ -1555,6 +1556,18 @@ __metadata:
   dependencies:
     es6-promisify: ^5.0.0
   checksum: 2/b40b7d9675c475202afac88c31d5ce42f041e50d2028bd4ad0cfc25b60abe4aedf6b976d9f653641663cbf45295539282d0cf7d50ece7f7c1dd0c05dc99a8112
+  languageName: node
+  linkType: hard
+
+"ajv@npm:^6.12.0":
+  version: 6.12.0
+  resolution: "ajv@npm:6.12.0"
+  dependencies:
+    fast-deep-equal: ^3.1.1
+    fast-json-stable-stringify: ^2.0.0
+    json-schema-traverse: ^0.4.1
+    uri-js: ^4.2.2
+  checksum: 2/aed1e0ab1b906913e2b466b1a0372ee5e4fe2927802ff81bcce350f482b0546cdb49df6ab551adad191ac19766007cdaf6c2d8b70e992528b806d9a8275ce2bd
   languageName: node
   linkType: hard
 

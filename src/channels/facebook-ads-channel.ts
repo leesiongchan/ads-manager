@@ -14,6 +14,11 @@ import {
   FacebookCustomAudienceData,
 } from '../interfaces/facebook-ads';
 import httpClient from '../utils/http-client';
+import {
+  facebookAdSchema,
+  facebookAdSetSchema,
+  facebookCampaignSchema,
+} from '../validation-schemas/facebook-ads-schema';
 import { normalizeEmail } from '../utils/normalizer';
 
 type FacebookAdsDefaultData = DeepPartial<
@@ -32,9 +37,9 @@ interface FacebookAdsAdCreativeData extends Omit<FacebookAdCreativeData, 'imageH
 interface FacebookAdsCampaignData {
   adCreativeIds?: string[];
   adCreatives?: Omit<FacebookAdsAdCreativeData, 'name'>[];
-  adSet: Omit<FacebookAdSetData, 'campaignId' | 'customAudienceId' | 'name' | 'status'>;
-  campaign: Omit<FacebookCampaignData, 'name' | 'status'>;
-  customAudience?: Omit<FacebookCustomAudienceData, 'name' | 'subtype'>;
+  adSet: Partial<Omit<FacebookAdSetData, 'campaignId' | 'customAudienceId' | 'name' | 'status'>>;
+  campaign: Partial<Omit<FacebookCampaignData, 'name' | 'status'>>;
+  customAudience?: Partial<Omit<FacebookCustomAudienceData, 'name' | 'subtype'>>;
   customAudienceId?: string;
   name: string;
   status: FacebookCampaignStatus;
@@ -62,6 +67,7 @@ export class FacebookAdsChannel extends Channel {
     if (!this.adAccount) {
       throw new Error('Channel has not been configured yet');
     }
+
     const image = (await httpClient(imageUrl, { responseType: 'buffer' })).body;
     const adImageData = {
       bytes: image.toString('base64'),
@@ -100,13 +106,17 @@ export class FacebookAdsChannel extends Channel {
       name: data.name,
       status: data.status,
     });
+    this.assertData(
+      { ...facebookCampaignSchema, required: ['name', 'objective', 'specialAdCategory', 'status'] },
+      campaignData,
+    );
     this.getLogger()?.info(campaignData, `Creating Campaign...`);
     const campaign = await this.adAccount.createCampaign([], campaignData);
 
     // 2. Create Custom Audience (optional)
     let customAudienceId = data.customAudienceId;
     if (data.customAudience) {
-      const customAudienceData: FacebookCustomAudienceData = {
+      const customAudienceData: Partial<FacebookCustomAudienceData> = {
         ...this.defaultValues.customAudience,
         ...data.customAudience,
         name: `${data.name} - Custom Audience - ${new Date().getTime()}`,
@@ -122,10 +132,17 @@ export class FacebookAdsChannel extends Channel {
       ...this.defaultValues.adSet,
       ...data.adSet,
       campaignId: campaign.id,
-      customAudienceId,
+      customAudienceId: customAudienceId!,
       name: `${data.name} - Ad Set`,
       status: data.status,
     });
+    this.assertData(
+      {
+        ...facebookAdSetSchema,
+        required: ['billingEvent', 'campaignId', 'customAudienceId', 'name', 'optimizationGoal', 'startTime', 'status'],
+      },
+      adSetData,
+    );
     this.getLogger()?.info(adSetData, `Creating Ad Set...`);
     const adSet = await this.adAccount.createAdSet([], adSetData);
 
@@ -219,7 +236,7 @@ export class FacebookAdsChannel extends Channel {
     return campaignId;
   }
 
-  public async createCustomAudience(data: FacebookCustomAudienceData) {
+  public async createCustomAudience(data: Partial<FacebookCustomAudienceData>) {
     if (!this.adAccount) {
       throw new Error('Channel has not been configured yet');
     }
@@ -271,6 +288,14 @@ export class FacebookAdsChannel extends Channel {
     this.defaultValues = defaultValues;
   }
 
+  private assertData<T>(schema: object, data: T) {
+    const validated = this.ajv.validate(schema, data) as boolean;
+    if (this.ajv.errors) {
+      throw new Error(this.ajv.errorsText());
+    }
+    return validated;
+  }
+
   private composeAdData(ad: FacebookAdData) {
     return {
       adset_id: ad.adSetId,
@@ -299,7 +324,7 @@ export class FacebookAdsChannel extends Channel {
     };
   }
 
-  private composeAdSetData(adSet: FacebookAdSetData) {
+  private composeAdSetData(adSet: Partial<FacebookAdSetData>) {
     return {
       bid_amount: adSet.bidAmount,
       billing_event: adSet.billingEvent,
@@ -309,11 +334,11 @@ export class FacebookAdsChannel extends Channel {
       optimization_goal: adSet.optimizationGoal,
       start_time: adSet.startTime,
       status: adSet.status,
-      targeting: { custom_audiences: [{ id: adSet.customAudienceId }] },
+      targeting: adSet.customAudienceId ? { custom_audiences: [{ id: adSet.customAudienceId }] } : undefined,
     };
   }
 
-  private composeCustomAudienceData(customAudience: FacebookCustomAudienceData) {
+  private composeCustomAudienceData(customAudience: Partial<FacebookCustomAudienceData>) {
     return {
       customer_file_source: customAudience.customerFileSource,
       description: customAudience.description,
@@ -334,7 +359,7 @@ export class FacebookAdsChannel extends Channel {
     };
   }
 
-  private composeCampaignData(campaign: FacebookCampaignData) {
+  private composeCampaignData(campaign: Partial<FacebookCampaignData>) {
     return {
       daily_budget: campaign.dailyBudget,
       lifetime_budget: campaign.lifetimeBudget,

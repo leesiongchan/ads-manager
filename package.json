@@ -1,6 +1,6 @@
 {
   "name": "@leesiongchan/ads-manager",
-  "version": "0.0.13",
+  "version": "0.0.15",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/leesiongchan/ads-manager.git",
@@ -25,6 +25,7 @@
     "build": "microbundle -f es,cjs --target node"
   },
   "dependencies": {
+    "ajv": "^6.12.0",
     "change-case": "^4.1.1",
     "date-fns": "^2.9.0",
     "facebook-nodejs-business-sdk": "^6.0.0",

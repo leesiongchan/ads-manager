@@ -38,6 +38,16 @@ export interface TwitterTargetingCriterionData {
 
 export interface TwitterTweetData {
   asUserId: string;
-  text: string;
+  cardUri?: string;
+  headline?: string;
   mediaKeys: string[];
+  text: string;
+  url?: string;
+}
+
+export interface TwitterWebsiteCardData {
+  mediaKey: string;
+  name: string;
+  websiteTitle: string;
+  websiteUrl: string;
 }

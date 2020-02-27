@@ -636,11 +636,17 @@ export class GoogleAdsChannel extends Channel {
   private getBiddingStrategyConfig(config: GoogleBiddingStrategyConfig, biddingStrategy: GoogleBiddingStrategyType) {
     switch (biddingStrategy) {
       case 'TARGET_SPEND':
-        return { cpc_bid_ceiling_micros: config.cpcBidCeilingAmount };
+        return {
+          cpc_bid_ceiling_micros: config.cpcBidCeilingAmount
+            ? convertMinorToMicroUnit(config.cpcBidCeilingAmount)
+            : undefined,
+        };
 
       case 'TARGET_IMPRESSION_SHARE':
         return {
-          cpc_bid_ceiling_micros: config.cpcBidCeilingAmount,
+          cpc_bid_ceiling_micros: config.cpcBidCeilingAmount
+            ? convertMinorToMicroUnit(config.cpcBidCeilingAmount)
+            : undefined,
           location: enums.TargetImpressionShareLocation.ANYWHERE_ON_PAGE,
           location_fraction_micros: 1000000, // 100%
         };

@@ -1,3 +1,4 @@
+import * as path from 'path';
 // @ts-ignore
 import { AdwordsUser } from 'node-adwords';
 import { CustomerInstance, enums, GoogleAdsApi, types } from 'google-ads-api';
@@ -38,6 +39,7 @@ interface GoogleAdsChannelConfig {
   clientSecret: string;
   customerAccountId: string;
   developerToken: string;
+  loginCustomerId?: string;
   refreshToken: string;
 }
 
@@ -136,7 +138,7 @@ export class GoogleAdsChannel extends Channel {
         ...this.composeCampaignBudgetMutateResource({
           ...this.defaultValues.campaignBudget,
           ...data.campaignBudget,
-          name: `${data.name} - Budget`,
+          name: `${data.name} - Budget - ${new Date().getTime()}`,
         }),
         _resource: 'CampaignBudget',
         resource_name: `${prefixResourceName}/campaignBudgets/${newCampaignBudgetId}`,
@@ -458,11 +460,11 @@ export class GoogleAdsChannel extends Channel {
     let type;
     switch (data.advertisingChannelType) {
       case 'DISPLAY':
-        type = enums.AdGroupType.SEARCH_STANDARD;
+        type = enums.AdGroupType.DISPLAY_STANDARD;
         break;
 
       case 'SEARCH':
-        type = enums.AdGroupType.DISPLAY_STANDARD;
+        type = enums.AdGroupType.SEARCH_STANDARD;
         break;
 
       default:
@@ -494,6 +496,7 @@ export class GoogleAdsChannel extends Channel {
           ...ad,
           responsive_display_ad: {
             business_name: data.businessName,
+            call_to_action_text: data.callToActionText,
             descriptions: data.descriptions.map(description => ({ text: description })),
             headlines: data.headlines.map(headline => ({ text: headline })),
             long_headline: { text: data.headlines[0] },
@@ -611,8 +614,8 @@ export class GoogleAdsChannel extends Channel {
   private composeImageAssetMutateResources(data: GoogleImageAssetsData): Promise<types.Asset[]> {
     return Promise.all(
       data.imageUrls.map(async imageUrl => ({
-        image_asset: { data: (await httpClient(imageUrl, { responseType: 'buffer' })).body.toString('base64') },
-        name: data.name,
+        image_asset: { data: (await httpClient(imageUrl, { responseType: 'arraybuffer' })).data.toString('base64') },
+        name: data.name || path.basename(imageUrl),
         type: enums.AssetType.IMAGE,
       })),
     );
@@ -666,6 +669,7 @@ export class GoogleAdsChannel extends Channel {
       developer_token: this.config.developerToken,
     });
     this.customer = this.client.Customer({
+      login_customer_id: this.config.loginCustomerId,
       customer_account_id: this.config.customerAccountId,
       refresh_token: this.config.refreshToken,
     });

@@ -40,7 +40,7 @@ interface TwitterAdsCampaignData {
   status: TwitterCampaignStatus;
   // tailoredAudience?: TwitterTailoredAudienceData;
   tailoredAudienceId: string;
-  tweet?: TwitterAdsTweetData;
+  tweet?: Omit<TwitterAdsTweetData, 'cardUri'>;
   tweetId?: string;
 }
 
@@ -98,7 +98,7 @@ export class TwitterAdsChannel extends Channel {
       const websiteCardData = this.composeWebsiteCard({
         mediaKey: mediaKeys[0],
         name: data.text,
-        websiteTitle: data.headline || '',
+        websiteTitle: data.headline || data.url,
         websiteUrl: data.url,
       });
       this.getLogger()?.info(websiteCardData, `Creating website card...`);
@@ -119,6 +119,8 @@ export class TwitterAdsChannel extends Channel {
     this.getLogger()?.info(tweetData, `Creating tweet...`);
     const tweetResponse = await this.twitterAdsClient.post(`${this.apiUrlPrefix}/tweet`, tweetData);
 
+    this.getLogger()?.info(`Tweet has been created successfully -> ${tweetResponse.data.id}`);
+
     return tweetResponse.data;
   }
 
@@ -136,7 +138,7 @@ export class TwitterAdsChannel extends Channel {
       throw new Error('The size of the Tailored Audience is too small');
     }
 
-    // 1. Create a campaign and associate it with the funding instrument.
+    // 1. Create a campaign and associate it with the funding instrument
     const campaignData = this.composeCampaignData({
       ...this.defaultValues.campaign,
       ...data.campaign,
@@ -146,7 +148,7 @@ export class TwitterAdsChannel extends Channel {
     this.getLogger()?.info(campaignData, `Creating Campaign...`);
     const { data: campaign } = await this.twitterAdsClient.post(`${this.apiUrlPrefix}/campaigns`, campaignData);
 
-    // 2. Create a line item associated with the campaign.
+    // 2. Create a line item associated with the campaign
     const lineItemData = this.composeLineItemData({
       ...this.defaultValues.lineItem,
       ...data.lineItem,
@@ -157,14 +159,14 @@ export class TwitterAdsChannel extends Channel {
     this.getLogger()?.info(lineItemData, `Creating Line Item...`);
     const { data: lineItem } = await this.twitterAdsClient.post(`${this.apiUrlPrefix}/line_items`, lineItemData);
 
-    // 3. Create tweet (optional)
+    // 3. Create a tweet (optional)
     let tweetId = data.tweetId;
     if (data.tweet) {
       const tweet = await this.createAd(data.tweet);
-      tweetId = tweet.id;
+      tweetId = tweet.id_str;
     }
 
-    // 4. Create promoted tweet associated with the line item.
+    // 4. Create a promoted tweet associated with the line item
     const promotedTweetData = this.composePromotedTweetData({
       lineItemId: lineItem.id,
       tweetIds: [tweetId!],
@@ -348,7 +350,7 @@ export class TwitterAdsChannel extends Channel {
   private composePromotedTweetData(data: TwitterPromotedTweetData) {
     return {
       line_item_id: data.lineItemId,
-      tweet_ids: data.tweetIds,
+      tweet_ids: data.tweetIds.join(','),
     };
   }
 
@@ -364,9 +366,10 @@ export class TwitterAdsChannel extends Channel {
   private composeTweetData(data: TwitterTweetData) {
     return {
       as_user_id: data.asUserId,
-      card_uri: data.cardUri,
       media_keys: data.mediaKeys,
+      nullcast: true,
       text: data.text,
+      ...(data.cardUri ? { card_uri: data.cardUri } : undefined),
     };
   }
 
@@ -438,7 +441,7 @@ export class TwitterAdsChannel extends Channel {
       version: UPLOAD_API_VERSION,
     });
 
-    const media = (await httpClient(data.mediaUrl, { responseType: 'buffer' })).body;
+    const media = (await httpClient(data.mediaUrl, { responseType: 'arraybuffer' })).data;
     const mediaData = media.toString('base64');
 
     // @ref: https://developer.twitter.com/en/docs/media/upload-media/uploading-media/chunked-media-upload

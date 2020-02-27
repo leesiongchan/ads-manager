@@ -15,6 +15,7 @@ export interface GoogleAdGroupAdData {
   adGroupResourceName: string;
   advertisingChannelType: GoogleAdvertisingChannelType;
   businessName: string;
+  callToActionText?: string;
   descriptions: [string, string];
   displayUrlPaths?: [string] | [string, string];
   headlines: [string, string, string];

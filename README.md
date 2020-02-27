@@ -48,11 +48,6 @@ const twitterAdsChannel = new TwitterAdsChannel('twitter-ads', {
   consumerKey: 'aaaa',
   consumerSecret: 'bbbb',
 });
-twitterAdsChannel.setDefaultValues({
-  tweet: {
-    asUserId: 'dddd',
-  },
-});
 
 const adsManager = new AdsManager({
   channels: [facebookAdsChannel, googleAdsChannel, twitterAdsChannel],
@@ -90,6 +85,7 @@ adsManager.use<FacebookAdsChannel>('facebook-ads')?.createCampaign({
 adsManager.use<GoogleAdsChannel>('google-ads')?.createCampaign({
   adGroupAd: {
     businessName: 'dddd',
+    callToActionText: 'Learn More',
     descriptions: ['I am desc 1', 'I am desc 2'],
     headlines: ['I am headline 1', 'I am headline 2', 'I am headline 3'],
     imageUrls: ['https://the-lib-will-automatically-download-and-convert-for-you.com'],
@@ -137,6 +133,7 @@ adsManager.use<TwitterAdsChannel>('twitter-ads')?.createCampaign({
     asUserId: 'ffff',
     mediaUrls: ['https://the-lib-will-automatically-download-and-convert-for-you.com'],
     text: 'I am text',
+    url: 'https://wherearethealiens.com',
   },
 });
 ```

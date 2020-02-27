@@ -14,11 +14,7 @@ import {
   FacebookCustomAudienceData,
 } from '../interfaces/facebook-ads';
 import httpClient from '../utils/http-client';
-import {
-  facebookAdSchema,
-  facebookAdSetSchema,
-  facebookCampaignSchema,
-} from '../validation-schemas/facebook-ads-schema';
+import { facebookAdSetSchema, facebookCampaignSchema } from '../validation-schemas/facebook-ads-schema';
 import { normalizeEmail } from '../utils/normalizer';
 
 type FacebookAdsDefaultData = DeepPartial<
@@ -68,7 +64,7 @@ export class FacebookAdsChannel extends Channel {
       throw new Error('Channel has not been configured yet');
     }
 
-    const image = (await httpClient(imageUrl, { responseType: 'buffer' })).body;
+    const image = (await httpClient(imageUrl, { responseType: 'arraybuffer' })).data;
     const adImageData = {
       bytes: image.toString('base64'),
       name: path.basename(imageUrl),
@@ -107,7 +103,7 @@ export class FacebookAdsChannel extends Channel {
       status: data.status,
     });
     this.assertData(
-      { ...facebookCampaignSchema, required: ['name', 'objective', 'specialAdCategory', 'status'] },
+      { ...facebookCampaignSchema, required: ['name', 'objective', 'special_ad_category', 'status'] },
       campaignData,
     );
     this.getLogger()?.info(campaignData, `Creating Campaign...`);
@@ -139,7 +135,15 @@ export class FacebookAdsChannel extends Channel {
     this.assertData(
       {
         ...facebookAdSetSchema,
-        required: ['billingEvent', 'campaignId', 'customAudienceId', 'name', 'optimizationGoal', 'startTime', 'status'],
+        required: [
+          'billing_event',
+          'campaign_id',
+          'custom_audience_id',
+          'name',
+          'optimization_goal',
+          'start_time',
+          'status',
+        ],
       },
       adSetData,
     );

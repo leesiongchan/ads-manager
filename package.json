@@ -1,6 +1,6 @@
 {
   "name": "@leesiongchan/ads-manager",
-  "version": "0.0.18",
+  "version": "0.0.19",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/leesiongchan/ads-manager.git",
@@ -22,8 +22,7 @@
   "module": "dist/ads-manager.esm.js",
   "types": "dist/src/index.d.ts",
   "scripts": {
-    "build": "microbundle -f es,cjs --target node",
-    "postinstall": "patch-package"
+    "build": "microbundle -f es,cjs --target node"
   },
   "dependencies": {
     "ajv": "^6.12.0",
